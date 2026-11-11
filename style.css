@@ -1,0 +1,42 @@
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:"Yu Gothic",sans-serif;
+}
+
+header{
+    text-align:center;
+    background:black;
+    color:gold;
+    padding:30px;
+}
+
+.card{
+    margin:20px;
+    padding:25px;
+    border-radius:15px;
+
+    background:linear-gradient(
+        90deg,
+        #222,
+        #2d2d2d
+    );
+
+    box-shadow:
+    0 0 15px rgba(255,215,0,0.15);
+}
+
+button{
+    background:gold;
+    color:black;
+    border:none;
+    padding:12px 24px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+button:hover{
+    background:#ffef7a;
+}

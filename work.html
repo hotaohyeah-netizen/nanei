@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AIワーク | 南映オンラインワーク</title>
+
+<meta name="description"
+content="英語・数学・国語・理科・社会を学べる無料のAIワークです。">
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div style="padding:20px">
+
+<a href="index.html">
+<button>← ホームへ</button>
+</a>
+
+</div>
+
+<header>
+
+<h1>南映AIワーク</h1>
+
+<p>
+ログイン不要で学習できます
+</p>
+
+</header>
+
+<div class="card">
+
+<h2>教科を選択</h2>
+
+<select id="subject">
+
+<option>英語</option>
+<option>数学</option>
+<option>国語</option>
+<option>理科</option>
+<option>社会</option>
+
+</select>
+
+<button onclick="makeQuestion()">
+問題を生成
+</button>
+
+</div>
+
+<div class="card" id="questions">
+
+<h2>問題がここに表示されます</h2>
+
+</div>
+
+<script>
+
+function makeQuestion(){
+
+let subject =
+document.getElementById("subject").value;
+
+let q = "";
+let ans = "";
+
+if(subject=="英語"){
+
+q = "I play soccer. を日本語にしなさい";
+ans = "私はサッカーをします";
+
+}
+
+if(subject=="数学"){
+
+q = "3x + 5 = 14 を解きなさい";
+ans = "3";
+
+}
+
+if(subject=="国語"){
+
+q = "『努力』の読みを答えなさい";
+ans = "どりょく";
+
+}
+
+if(subject=="理科"){
+
+q = "植物が光合成を行う器官は？";
+ans = "葉";
+
+}
+
+if(subject=="社会"){
+
+q = "江戸幕府を開いた人物は？";
+ans = "徳川家康";
+
+}
+
+document.getElementById("questions").innerHTML =
+
+`
+<h2>${subject}</h2>
+
+<p><b>問題</b></p>
+
+<p>${q}</p>
+
+<input
+id="answer"
+type="text"
+placeholder="答えを入力">
+
+<br><br>
+
+<button onclick="checkAnswer('${ans}')">
+答え合わせ
+</button>
+
+<div id="result"></div>
+`;
+
+}
+
+function checkAnswer(correct){
+
+let userAnswer =
+document.getElementById("answer").value;
+
+if(userAnswer == correct){
+
+document.getElementById("result").innerHTML =
+
+"<h3 style='color:lime'>〇 正解！</h3>";
+
+}else

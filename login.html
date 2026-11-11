@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ログイン</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+<h1>南映ログイン</h1>
+</header>
+
+<div class="card">
+
+<input type="password" id="pass">
+
+<button onclick="login()">
+ログイン
+</button>
+
+</div>
+
+<script>
+
+function login(){
+
+if(document.getElementById("pass").value=="moriyama1-22-1"){
+
+location.href="menu.html";
+
+}else{
+
+alert("パスコードが違います");
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
