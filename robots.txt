@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://hotaohyeah-netizen.github.io/nanei/sitemap.xml

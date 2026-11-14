@@ -3,19 +3,31 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
 <url>
-<loc>http://221.133.123.224/</loc>
+<loc>https://hotaohyeah-netizen.github.io/nanei/</loc>
 </url>
 
 <url>
-<loc>http://221.133.123.224/work.html</loc>
+<loc>https://hotaohyeah-netizen.github.io/nanei/work.html</loc>
 </url>
 
 <url>
-<loc>http://221.133.123.224/login.html</loc>
+<loc>https://hotaohyeah-netizen.github.io/nanei/login.html</loc>
 </url>
 
 <url>
-<loc>http://221.133.123.224/menu.html</loc>
+<loc>https://hotaohyeah-netizen.github.io/nanei/menu.html</loc>
+</url>
+
+<url>
+<loc>https://hotaohyeah-netizen.github.io/nanei/movie.html</loc>
+</url>
+
+<url>
+<loc>https://hotaohyeah-netizen.github.io/nanei/music.html</loc>
+</url>
+
+<url>
+<loc>https://hotaohyeah-netizen.github.io/nanei/actor.html</loc>
 </url>
 
 </urlset>
