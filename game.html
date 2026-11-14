@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>南山柊じゃんけんバトル</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+.enemy-hand,
+.player-hand{
+    width:120px;
+    max-width:90%;
+}
+
+.actor{
+    width:200px;
+    border-radius:10px;
+}
+
+.hp{
+    font-size:24px;
+    font-weight:bold;
+}
+
+.vs{
+    font-size:36px;
+    margin:20px 0;
+}
+
+.buttons button{
+    margin:5px;
+}
+
+#message{
+    font-size:20px;
+    margin-top:15px;
+    font-weight:bold;
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+<h1>南山柊じゃんけんバトル</h1>
+<p>先に相手HPを0にしよう！</p>
+</header>
+
+<div class="card">
+
+<h2>難易度</h2>
+
+<select id="difficulty">
+<option value="easy">弱</option>
+<option value="normal">中</option>
+<option value="hard">強</option>
+</select>
+
+</div>
+
+<div class="card">
+
+<h2>南山柊</h2>
+
+<div class="hp">
+HP：<span id="enemyHP">5</span>
+</div>
+
+<br>
+
+<img src="images/actor.jpg" class="actor">
+
+<br><br>
+
+<img src="images/gu.jpeg" id="enemyHand" class="enemy-hand">
+
+</div>
+
+<div class="vs">
+VS
+</div>
+
+<div class="card">
+
+<img src="images/gu.jpeg" id="playerHand" class="player-hand">
+
+<br><br>
+
+<div class="hp">
+HP：<span id="myHP">5</span>
+</div>
+
+<p>あなた</p>
+
+</div>
+
+<div class="card">
+
+<h2>手を選ぶ</h2>
+
+<div class="buttons">
+
+<button onclick="play('gu')">
+グー
+</button>
+
+<button onclick="play('choki')">
+チョキ
+</button>
+
+<button onclick="play('pa')">
+パー
+</button>
+
+<button onclick="play('gyuin')" id="gyuinBtn">
+ギュイーン
+</button>
+
+<button onclick="play('bubu')">
+ブーブー
+</button>
+
+</div>
+
+<p id="message">
+勝負開始！
+</p>
+
+<p>
+ブーブーあいこ：
+<span id="bubuCount">0</span>/3
+</p>
+
+<p>
+最高連勝：
+<span id="bestStreak">0</span>
+</p>
+
+<p>
+ハードコア最高：
+<span id="hardcoreBest">0</span>
+</p>
+
+<div id="hardcoreArea" style="display:none;">
+
+<h2>🔥ハードコアモード</h2>
+
+<button onclick="startHardcore()">
+🔥 ハードコア開始
+</button>
+
+<p id="hardcoreStreak">
+現在連勝：0
+</p>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<a href="menu.html">
+<button>会員ページへ戻る</button>
+</a>
+
+</div>
+
+<script>
+
+let myHP = 5;
+let enemyHP = 5;
+
+let gyuinUsed = false;
+
+let bubuDraws = 0;
+
+let streak = 0;
+
+let lastPlayerHand = null;
+let enemyGyuinUsed = false;
+
+let bestStreak =
+localStorage.getItem("bestStreak") || 0;
+
+document.getElementById("bestStreak").textContent =
+bestStreak;
+
+let hardcoreMode = false;
+
+let hardcoreStreak = 0;
+
+let hardcoreBest =
+localStorage.getItem("hardcoreBest") || 0;
+
+document.getElementById("hardcoreBest").textContent =
+hardcoreBest;
+
+if(
+localStorage.getItem("hardcoreUnlocked")
+==="true"
+){
+document.getElementById("hardcoreArea").style.display =
+"block";
+}
+
+const handImage = {
+    gu:"images/gu.jpeg",
+    choki:"images/choki.jpeg",
+    pa:"images/pa.jpeg",
+    gyuin:"images/gyuin.jpeg",
+    bubu:"images/bubu.jpeg"
+};
+
+const gyuinSound =
+new Audio("sounds/gyuin.mp3");
+
+const bubuSound =
+new Audio("music/bgm1.mp3");
+
+const winSound =
+new Audio("sounds/win.mp3");
+
+const loseSound =
+new Audio("sounds/lose.mp3");
+
+function getEnemyHand(){
+
+    const level =
+    document.getElementById("difficulty").value;
+
+    const hands =
+    ["gu","choki","pa","bubu"];
+
+    // 弱
+    if(level==="easy"){
+
+        return hands[
+            Math.floor(Math.random()*hands.length)
+        ];
+    }
+
+    // 中
+    if(level==="normal"){
+
+        if(
+            enemyHP <= 1 &&
+            !enemyGyuinUsed &&
+            Math.random() < 0.2
+        ){
+            enemyGyuinUsed = true;
+            return "gyuin";
+        }
+
+        if(
+            lastPlayerHand &&
+            Math.random() < 0.5
+        ){
+            return lastPlayerHand;
+        }
+
+        return hands[
+            Math.floor(Math.random()*hands.length)
+        ];
+    }
+
+    // 強
+    if(level==="hard"){
+
+        if(
+            enemyHP <= 2 &&
+            !enemyGyuinUsed &&
+            Math.random() < 0.5
+        ){
+            enemyGyuinUsed = true;
+            return "gyuin";
+        }
+
+        if(bubuDraws >= 2){
+
+            const safeHands =
+            ["gu","choki","pa"];
+
+            return safeHands[
+                Math.floor(
+                    Math.random()*safeHands.length
+                )
+            ];
+        }
+
+        if(
+            lastPlayerHand &&
+            Math.random() < 0.6
+        ){
+
+            const counter = {
+
+                gu:"pa",
+                choki:"gu",
+                pa:"choki",
+                bubu:"pa"
+
+            };
+
+            return counter[lastPlayerHand];
+        }
+
+        return hands[
+            Math.floor(Math.random()*hands.length)
+        ];
+    }
+
+    return "gu";
+}
+
+function play(player){
+
+    if(player==="gyuin"){
+
+        if(gyuinUsed){
+            alert("ギュイーンは1回だけ！");
+            return;
+        }
+
+        gyuinUsed = true;
+
+        document.getElementById("gyuinBtn").disabled=true;
+
+        gyuinSound.currentTime=0;
+        gyuinSound.play();
+    }
+
+    if(player==="bubu"){
+
+        bubuSound.currentTime=0;
+        bubuSound.play();
+    }
+
+    const enemy = getEnemyHand();
+
+    document.getElementById("playerHand").src =
+    handImage[player];
+
+    document.getElementById("enemyHand").src =
+    handImage[enemy];
+
+    let result =
+judge(player,enemy);
+
+lastPlayerHand = player;
+
+    if(result==="win"){
+
+        enemyHP--;
+
+        document.getElementById("message").textContent =
+        "やるじゃないか！";
+
+    }
+
+    else if(result==="lose"){
+
+        myHP--;
+
+        document.getElementById("message").textContent =
+        "まだまだだな！";
+
+    }
+
+    else{
+
+        document.getElementById("message").textContent =
+        "あいこ！";
+    }
+
+    document.getElementById("myHP").textContent =
+    myHP;
+
+    document.getElementById("enemyHP").textContent =
+    enemyHP;
+
+    if(enemyHP<=0){
+
+        winSound.play();
+
+        streak++;
+
+        if(streak > bestStreak){
+
+            bestStreak = streak;
+
+            localStorage.setItem(
+            "bestStreak",
+            bestStreak
+            );
+
+            document.getElementById("bestStreak").textContent =
+            bestStreak;
+        }
+
+        setTimeout(()=>{
+            alert("勝利！");
+            location.reload();
+        },300);
+
+    }
+
+    if(myHP<=0){
+
+        loseSound.play();
+
+        streak = 0;
+
+        setTimeout(()=>{
+            alert("敗北...");
+            location.reload();
+        },300);
+
+    }
+}
+
+function judge(me,ai){
+
+    if(me==="bubu" && ai==="bubu"){
+
+        bubuDraws++;
+
+        document.getElementById("bubuCount").textContent =
+        bubuDraws;
+
+        if(bubuDraws>=3){
+
+            enemyHP=0;
+        }
+
+        return "draw";
+    }
+
+    if(me==="gyuin"){
+
+        if(ai==="bubu"){
+            return "draw";
+        }
+
+        return "win";
+    }
+
+    if(me==="bubu"){
+
+        if(ai==="pa"){
+            return "lose";
+        }
+
+        return "draw";
+    }
+
+    if(me===ai){
+        return "draw";
+    }
+
+    if(
+      (me==="gu"&&ai==="choki")||
+      (me==="choki"&&ai==="pa")||
+      (me==="pa"&&ai==="gu")
+    ){
+        return "win";
+    }
+
+    return "lose";
+}
+
+function startHardcore(){
+
+    hardcoreMode = true;
+
+    hardcoreStreak = 0;
+
+    myHP = 1;
+
+    enemyHP = 1;
+
+    document.getElementById("myHP").textContent =
+    myHP;
+
+    document.getElementById("enemyHP").textContent =
+    "∞";
+
+    document.getElementById("difficulty").value =
+    "hard";
+
+    document.getElementById("difficulty").disabled =
+    true;
+
+    document.getElementById("message").textContent =
+    "🔥ハードコアモード開始！";
+}
+
+</script>
+
+</body>
+</html>
