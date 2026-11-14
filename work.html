@@ -2,144 +2,140 @@
 <html lang="ja">
 
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>AIワーク | 南映オンラインワーク</title>
-
-<meta name="description"
-content="英語・数学・国語・理科・社会を学べる無料のAIワークです。">
-
-<link rel="stylesheet" href="style.css">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIワーク | 南映オンラインワーク</title>
+  <meta name="description" content="英語・数学・国語・理科・社会を学べる無料のAIワークです。">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<div style="padding:20px">
+  <div style="padding:20px">
+    <a href="index.html">
+      <button>← ホームへ</button>
+    </a>
+  </div>
 
-<a href="index.html">
-<button>← ホームへ</button>
-</a>
+  <header>
+    <h1>南映AIワーク</h1>
+    <p>ログイン不要・無料でAI学習ができます</p>
+  </header>
 
-</div>
+  <div class="card">
+    <h2>学年と教科を選択</h2>
 
-<header>
+    <p>
+      <select id="grade" style="padding: 8px;">
+        <option value="中学1年生">中学1年生</option>
+        <option value="中学2年生">中学2年生</option>
+        <option value="中学3年生">中学3年生</option>
+      </select>
 
-<h1>南映AIワーク</h1>
+      <select id="subject" style="padding: 8px;">
+        <option value="英語">英語</option>
+        <option value="数学">数学</option>
+        <option value="国語">国語</option>
+        <option value="理科">理科</option>
+        <option value="社会">社会</option>
+      </select>
+    </p>
 
-<p>
-ログイン不要で学習できます
-</p>
+    <button id="genBtn" onclick="makeQuestion()">
+      AIで問題を生成
+    </button>
+  </div>
 
-</header>
+  <div class="card" id="questions">
+    <h2>問題がここに表示されます</h2>
+  </div>
 
-<div class="card">
+  <script>
+    const WORKER_URL = "https://workers.dev";
 
-<h2>教科を選択</h2>
+    let currentAnswer = "";
+    let currentExplanation = "";
 
-<select id="subject">
+    async function makeQuestion() {
+      const grade = document.getElementById("grade").value;
+      const subject = document.getElementById("subject").value;
+      const btn = document.getElementById("genBtn");
+      const qBox = document.getElementById("questions");
 
-<option>英語</option>
-<option>数学</option>
-<option>国語</option>
-<option>理科</option>
-<option>社会</option>
+      btn.disabled = true;
+      btn.innerText = "AIが問題を作成中...";
+      qBox.innerHTML = "<h2>AIが問題を考えています...</h2>";
 
-</select>
+      const prompt = `あなたは中学校の先生です。${grade}の${subject}の練習問題を1問作成してください。
+答えは生徒がキーボードで入力しやすいように、短い単語・数字・短い英文のいずれかにしてください。
+必ず以下のJSON形式のみで出力してください。
+{
+  "question": "問題文",
+  "answer": "正解（短い言葉や数字）",
+  "explanation": "わかりやすい解説"
+}`;
 
-<button onclick="makeQuestion()">
-問題を生成
-</button>
+      try {
+        const response = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          })
+        });
 
-</div>
+        const data = await response.json();
 
-<div class="card" id="questions">
+        if (!response.ok) {
+          throw new Error(data.error?.message || "エラーが発生しました");
+        }
 
-<h2>問題がここに表示されます</h2>
+        const rawText = data.candidates.at(0).content.parts.at(0).text;
+        const resultData = JSON.parse(rawText);
 
-</div>
+        currentAnswer = resultData.answer;
+        currentExplanation = resultData.explanation;
 
-<script>
+        qBox.innerHTML = `
+          <h2>${grade}・${subject}</h2>
+          <p><b>問題</b></p>
+          <p>${resultData.question}</p>
+          <input id="answer" type="text" placeholder="答えを入力" style="padding: 8px;">
+          <br><br>
+          <button onclick="checkAnswer()">答え合わせ</button>
+          <div id="result"></div>
+        `;
 
-function makeQuestion(){
+      } catch (error) {
+        qBox.innerHTML = `<h2>エラーが発生しました</h2><p>${error.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "AIで問題を生成";
+      }
+    }
 
-let subject =
-document.getElementById("subject").value;
+    function checkAnswer() {
+      const userAnswer = document.getElementById("answer").value.trim();
+      const resultDiv = document.getElementById("result");
 
-let q = "";
-let ans = "";
+      if (userAnswer === currentAnswer) {
+        resultDiv.innerHTML = `
+          <h3 style="color:lime">〇 正解！</h3>
+          <p><b>解説：</b>${currentExplanation}</p>
+        `;
+      } else {
+        resultDiv.innerHTML = `
+          <h3 style="color:red">× 残念！</h3>
+          <p><b>正解：</b>${currentAnswer}</p>
+          <p><b>解説：</b>${currentExplanation}</p>
+        `;
+      }
+    }
+  </script>
 
-if(subject=="英語"){
+</body>
 
-q = "I play soccer. を日本語にしなさい";
-ans = "私はサッカーをします";
-
-}
-
-if(subject=="数学"){
-
-q = "3x + 5 = 14 を解きなさい";
-ans = "3";
-
-}
-
-if(subject=="国語"){
-
-q = "『努力』の読みを答えなさい";
-ans = "どりょく";
-
-}
-
-if(subject=="理科"){
-
-q = "植物が光合成を行う器官は？";
-ans = "葉";
-
-}
-
-if(subject=="社会"){
-
-q = "江戸幕府を開いた人物は？";
-ans = "徳川家康";
-
-}
-
-document.getElementById("questions").innerHTML =
-
-`
-<h2>${subject}</h2>
-
-<p><b>問題</b></p>
-
-<p>${q}</p>
-
-<input
-id="answer"
-type="text"
-placeholder="答えを入力">
-
-<br><br>
-
-<button onclick="checkAnswer('${ans}')">
-答え合わせ
-</button>
-
-<div id="result"></div>
-`;
-
-}
-
-function checkAnswer(correct){
-
-let userAnswer =
-document.getElementById("answer").value;
-
-if(userAnswer == correct){
-
-document.getElementById("result").innerHTML =
-
-"<h3 style='color:lime'>〇 正解！</h3>";
-
-}else
+</html>
