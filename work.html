@@ -59,6 +59,76 @@
     async function makeQuestion() {
       const grade = document.getElementById("grade").value;
       const subject = document.getElementById("subject").value;
+      const topics = {
+
+  英語: [
+    "単語",
+    "文法",
+    "英作文",
+    "英訳",
+    "和訳",
+    "並び替え",
+    "疑問文",
+    "現在進行形",
+    "過去形"
+  ],
+
+  数学: [
+    "正負の数",
+    "文字式",
+    "一次方程式",
+    "比例",
+    "反比例",
+    "一次関数",
+    "図形",
+    "証明",
+    "確率"
+  ],
+
+  国語: [
+    "漢字",
+    "四字熟語",
+    "ことわざ",
+    "慣用句",
+    "読解",
+    "古文",
+    "文法"
+  ],
+
+  理科: [
+    "生物",
+    "植物",
+    "人体",
+    "化学変化",
+    "電流",
+    "力",
+    "天体",
+    "地層"
+  ],
+
+  社会: [
+    "歴史",
+    "地理",
+    "公民",
+    "戦国時代",
+    "江戸時代",
+    "明治時代",
+    "日本地理",
+    "世界地理"
+  ]
+
+};
+
+const topic =
+topics[subject][
+  Math.floor(
+    Math.random() *
+    topics[subject].length
+  )
+];
+
+const randomId =
+Math.floor(Math.random() * 1000000);
       const btn = document.getElementById("genBtn");
       const qBox = document.getElementById("questions");
 
@@ -66,14 +136,38 @@
       btn.innerText = "AIが問題を作成中...";
       qBox.innerHTML = "<h2>AIが問題を考えています...</h2>";
 
-      const prompt = `あなたは中学校の先生です。${grade}の${subject}の練習問題を1問作成してください。
-答えは生徒がキーボードで入力しやすいように、短い単語・数字・短い英文のいずれかにしてください。
-必ず以下のJSON形式のみで出力してください。
+      const prompt = `
+問題番号:${randomId}
+
+あなたは優秀な日本の中学校教師です。
+
+学年:
+${grade}
+
+教科:
+${subject}
+
+出題単元:
+${topic}
+
+必ず上記の単元から問題を1問作成してください。
+
+毎回違う問題を作成してください。
+
+同じ単元でも数値・文章・登場人物・場面設定を毎回変更してください。
+
+同じ問題や似た問題は禁止です。
+
+答えは短い単語・数字・短文で答えられるようにしてください。
+
+必ずJSONのみを返してください。
+
 {
-  "question": "問題文",
-  "answer": "正解（短い言葉や数字）",
-  "explanation": "わかりやすい解説"
-}`;
+  "question":"問題文",
+  "answer":"答え",
+  "explanation":"解説"
+}
+`;
 
       try {
         const response = await fetch(WORKER_URL, {
@@ -99,15 +193,29 @@
         currentAnswer = resultData.answer;
         currentExplanation = resultData.explanation;
 
-        qBox.innerHTML = `
-          <h2>${grade}・${subject}</h2>
-          <p><b>問題</b></p>
-          <p>${resultData.question}</p>
-          <input id="answer" type="text" placeholder="答えを入力" style="padding: 8px;">
-          <br><br>
-          <button onclick="checkAnswer()">答え合わせ</button>
-          <div id="result"></div>
-        `;
+       qBox.innerHTML = `
+  <h2>${grade}・${subject}</h2>
+
+  <p><b>単元：</b>${topic}</p>
+
+  <p><b>問題</b></p>
+
+  <p>${resultData.question}</p>
+
+  <input
+    id="answer"
+    type="text"
+    placeholder="答えを入力"
+    style="padding:8px;">
+
+  <br><br>
+
+  <button onclick="checkAnswer()">
+    答え合わせ
+  </button>
+
+  <div id="result"></div>
+`;
 
       } catch (error) {
         qBox.innerHTML = `<h2>エラーが発生しました</h2><p>${error.message}</p>`;
