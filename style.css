@@ -1,42 +1,102 @@
 body{
     margin:0;
-    background:#111;
     color:white;
     font-family:"Yu Gothic",sans-serif;
+
+    /* 背景画像 */
+    background-image:url("images/nanei.jpg");
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
 }
 
+/* 上部タイトル */
 header{
     text-align:center;
-    background:black;
+    background:rgba(0,0,0,0.8);
     color:gold;
     padding:30px;
+    border-bottom:3px solid gold;
 }
 
+/* コンテンツ枠 */
 .card{
+    background:rgba(0,0,0,0.85);
+
     margin:20px;
-    padding:25px;
+    padding:20px;
+
     border-radius:15px;
 
-    background:linear-gradient(
-        90deg,
-        #222,
-        #2d2d2d
-    );
-
     box-shadow:
-    0 0 15px rgba(255,215,0,0.15);
+    0 0 15px rgba(255,215,0,0.3);
 }
 
+/* ボタン */
 button{
     background:gold;
     color:black;
+
     border:none;
+
     padding:12px 24px;
+
     border-radius:10px;
-    cursor:pointer;
+
     font-weight:bold;
+
+    cursor:pointer;
 }
 
 button:hover{
-    background:#ffef7a;
+    background:#ffe45c;
+}
+
+/* 入力欄 */
+input,
+select{
+    width:100%;
+    max-width:400px;
+
+    padding:10px;
+
+    border-radius:8px;
+
+    border:none;
+}
+
+/* リンク */
+a{
+    text-decoration:none;
+}
+
+/* 動画 */
+video{
+    width:100%;
+    border-radius:10px;
+}
+
+/* 音楽 */
+audio{
+    width:100%;
+}
+
+/* 画像 */
+img{
+    max-width:100%;
+    border-radius:10px;
+}
+
+/* フッター */
+footer{
+    text-align:center;
+    padding:20px;
+    background:rgba(0,0,0,0.8);
+    color:gold;
+    margin-top:30px;
+}
+
+/* 見出し */
+h1,h2,h3{
+    color:gold;
 }
