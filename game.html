@@ -136,6 +136,11 @@ HP：<span id="myHP">5</span>
 </p>
 
 <p>
+南山のブーブー：
+<span id="enemyBubuCount">0</span>/3
+</p>
+
+<p>
 最高連勝：
 <span id="bestStreak">0</span>
 </p>
@@ -147,10 +152,10 @@ HP：<span id="myHP">5</span>
 
 <div id="hardcoreArea" style="display:none;">
 
-<h2>🔥ハードコアモード</h2>
+<h2>ハードコアモード</h2>
 
 <button onclick="startHardcore()">
-🔥 ハードコア開始
+ハードコア開始
 </button>
 
 <p id="hardcoreStreak">
@@ -177,6 +182,7 @@ let enemyHP = 5;
 let gyuinUsed = false;
 
 let bubuDraws = 0;
+let enemyBubuDraws = 0;
 
 let streak = 0;
 
@@ -351,7 +357,44 @@ function play(player){
 judge(player,enemy);
 
 lastPlayerHand = player;
+if(enemy==="bubu" && player!=="pa"){
 
+    enemyBubuDraws++;
+
+    document.getElementById(
+        "enemyBubuCount"
+    ).textContent =
+    enemyBubuDraws;
+
+    if(!hardcoreMode){
+
+        if(enemyBubuDraws>=3){
+
+            myHP = 0;
+        }
+
+    }else{
+
+        if(enemyBubuDraws>=3){
+
+            myHP--;
+
+            enemyBubuDraws = 0;
+
+            document.getElementById(
+                "enemyBubuCount"
+            ).textContent = 0;
+        }
+    }
+
+}else{
+
+    enemyBubuDraws = 0;
+
+    document.getElementById(
+        "enemyBubuCount"
+    ).textContent = 0;
+}
     if(result==="win"){
 
         enemyHP--;
@@ -424,39 +467,52 @@ lastPlayerHand = player;
 
 function judge(me,ai){
 
-    if(me==="bubu" && ai==="bubu"){
-
-        bubuDraws++;
-
-        document.getElementById("bubuCount").textContent =
-        bubuDraws;
-
-        if(bubuDraws>=3){
-
-            enemyHP=0;
-        }
-
-        return "draw";
-    }
-
-    if(me==="gyuin"){
-
-        if(ai==="bubu"){
-            return "draw";
-        }
-
-        return "win";
-    }
-
+    // ブーブー
     if(me==="bubu"){
 
         if(ai==="pa"){
             return "lose";
         }
 
+        bubuDraws++;
+
+        document.getElementById("bubuCount").textContent =
+        bubuDraws;
+
+        if(!hardcoreMode){
+
+            if(bubuDraws>=3){
+
+                enemyHP = 0;
+            }
+
+        }else{
+
+            if(bubuDraws>=3){
+
+                enemyHP--;
+
+                bubuDraws = 0;
+
+                document.getElementById("bubuCount").textContent =
+                bubuDraws;
+            }
+        }
+
         return "draw";
     }
 
+    // ギュイーン
+    if(me==="gyuin"){
+
+        if(ai==="bubu" || ai==="gyuin"){
+            return "draw";
+        }
+
+        return "win";
+    }
+
+    // 通常じゃんけん
     if(me===ai){
         return "draw";
     }
@@ -478,7 +534,7 @@ function startHardcore(){
 
     hardcoreStreak = 0;
 
-    myHP = 1;
+    myHP = 1
 
     enemyHP = 1;
 
