@@ -427,6 +427,25 @@ if(enemy==="bubu" && player!=="pa"){
 
     if(enemyHP<=0){
 
+        const level =
+document.getElementById("difficulty").value;
+
+if(level==="hard" && !hardcoreMode){
+
+    localStorage.setItem(
+        "hardcoreUnlocked",
+        "true"
+    );
+
+    document.getElementById(
+        "hardcoreArea"
+    ).style.display = "block";
+
+    alert(
+        "ハードコアモード解放！"
+    );
+}
+
         winSound.play();
 
         streak++;
