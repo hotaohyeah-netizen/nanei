@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dino AI Quiz - 制限時間付きランゲーム</title>
+<style>
+  /* ==========================================
+     ご提示いただいた基本スタイルを適用
+     ========================================== */
+  body{
+    margin:0;
+    color:white;
+    font-family:"Yu Gothic",sans-serif;
+
+    background-image:url("images/nanei.jpg");
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
+    background-color: #111;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    touch-action: manipulation;
+  }
+
+  /* 上部タイトル */
+  header{
+    text-align:center;
+    background:rgba(0,0,0,0.8);
+    color:gold;
+    padding:20px;
+    border-bottom:3px solid gold;
+    width: 100%;
+    position: absolute;
+    top: 0;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  /* コンテンツ枠（ゲーム全体のラッパー） */
+  .card{
+    background:rgba(0,0,0,0.85);
+    margin:20px;
+    padding:20px;
+    border-radius:15px;
+    box-shadow: 0 0 15px rgba(255,215,0,0.3);
+    width: 100%;
+    max-width: 720px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    margin-top: 80px;
+  }
+
+  /* ボタン */
+  button{
+    background:gold;
+    color:black;
+    border:none;
+    padding:12px 24px;
+    border-radius:10px;
+    font-weight:bold;
+    cursor:pointer;
+    font-family:"Yu Gothic",sans-serif;
+  }
+  button:hover{
+    background:#ffe45c;
+  }
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  /* 入力欄・セレクト */
+  input, select{
+    width:100%;
+    max-width:400px;
+    padding:10px;
+    border-radius:8px;
+    border:none;
+    font-family:"Yu Gothic",sans-serif;
+  }
+
+  /* リンク */
+  a{
+    text-decoration:none;
+    color: gold;
+  }
+
+  /* 動画・音楽・画像 */
+  video, audio, img{
+    width:100%;
+    border-radius:10px;
+    max-width:100%;
+  }
+
+  /* 見出し */
+  h1, h2, h3{
+    color:gold;
+  }
+
+  /* ==========================================
+     ゲーム固有のレイアウトパーツ
+     ========================================== */
+  #quiz-area {
+    background: rgba(0, 0, 0, 0.4);
+    border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+    padding: 16px 20px;
+    transition: background-color 0.15s;
+    min-height: 230px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-top-left-radius: 13px;
+    border-top-right-radius: 13px;
+    position: relative;
+    overflow: hidden;
+  }
+  #quiz-area.correct-flash { background-color: rgba(34, 197, 94, 0.3); }
+  #quiz-area.wrong-flash { background-color: rgba(239, 68, 68, 0.3); }
+
+  /* 制限時間プログレスバー */
+  #timer-bar-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  #timer-bar {
+    width: 100%;
+    height: 100%;
+    background: gold;
+    transition: width 0.1s linear;
+  }
+  #timer-bar.warning {
+    background: #ef4444; /* 残り時間が少ない時は赤色に */
+  }
+
+  .quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #cbd5e1;
+  }
+  .subject-badge {
+    background: gold;
+    color: black;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: bold;
+    font-size: 12px;
+  }
+  #ai-status {
+    font-size: 11px;
+    color: #4ade80;
+    font-weight: bold;
+  }
+  #question-text {
+    font-size: 17px;
+    font-weight: bold;
+    color: white;
+    margin: 0 0 12px 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .choices-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .choice-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    color: white;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    padding: 12px 10px;
+    font-size: 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .choice-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    border-color: gold;
+  }
+  .choice-num {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    background: gold;
+    color: black;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  /* 5秒間解説ボックス */
+  #explanation-box {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid gold;
+    border-radius: 10px;
+    padding: 12px 14px;
+    animation: fadeIn 0.2s ease;
+  }
+  .exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    color: gold;
+  }
+  #exp-timer {
+    background: rgba(255, 215, 0, 0.2);
+    color: gold;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  #explanation-text {
+    margin: 0;
+    font-size: 14px;
+    color: #e2e8f0;
+    line-height: 1.5;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 下部：ゲームエリア */
+  #canvas-container {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #overlay-msg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  #overlay-msg h2 {
+    margin: 0 0 8px 0;
+    color: gold;
+    font-size: 22px;
+  }
+  #overlay-msg p {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .hidden { display: none !important; }
+
+  /* フッター */
+  footer{
+    text-align:center;
+    padding:15px;
+    background:rgba(0,0,0,0.8);
+    color:gold;
+    margin-top:auto;
+    width: 100%;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NANEI AI 学習プラットフォーム - Dino Quiz</h1>
+</header>
+
+<div class="card" id="game-wrapper">
+  <!-- 問題＆解説表示エリア -->
+  <div id="quiz-area">
+    <!-- 制限時間バー -->
+    <div id="timer-bar-container">
+      <div id="timer-bar"></div>
+    </div>
+
+    <div>
+      <div class="quiz-header">
+        <div>
+          <span id="subject-badge" class="subject-badge">中学全範囲</span>
+          <span id="quiz-stats" style="margin-left: 8px;">正解数: 0問</span>
+        </div>
+        <span id="ai-status">プール準備完了</span>
+      </div>
+      <p id="question-text">準備完了！下のゲーム画面をタップしてスタート</p>
+    </div>
+
+    <!-- 選択肢（解答中） -->
+    <div class="choices-grid" id="choices-container">
+      <button class="choice-btn" data-index="0"><span class="choice-num">1</span><span class="choice-text">-</span></button>
+      <button class="choice-btn" data-index="1"><span class="choice-num">2</span><span class="choice-text">-</span></button>
+      <button class="choice-btn" data-index="2"><span class="choice-num">3</span><span class="choice-text">-</span></button>
+      <button class="choice-btn" data-index="3"><span class="choice-num">4</span><span class="choice-text">-</span></button>
+    </div>
+
+    <!-- 解説表示（正解後5秒間表示） -->
+    <div id="explanation-box" class="hidden">
+      <div class="exp-header">
+        <span>⭕ 正解！ポイント解説</span>
+        <span id="exp-timer">次の問題まで 5秒</span>
+      </div>
+      <p id="explanation-text">ここに解説が表示されます。</p>
+    </div>
+  </div>
+
+  <!-- ゲームエリア（タップでジャンプ） -->
+  <div id="canvas-container">
+    <canvas id="gameCanvas" width="720" height="200"></canvas>
+    <div id="overlay-msg">
+      <h2 id="overlay-title">DINO AI QUIZ</h2>
+      <p id="overlay-sub">
+        走りながら上の4択に答えよう！（1問制限時間: 10秒）<br>
+        正解後は5秒間の解説タイム（その間もジャンプで避け続けよう！）<br>
+        時間切れ・不正解・障害物衝突で即ゲームオーバー。<br><br>
+        <b>[ 画面タップ または Spaceキー でスタート ]</b>
+      </p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  &copy; NANEI AI Learning System
+</footer>
+
+<!-- ========================================== -->
+<!-- 大量問題プール（JSON）                       -->
+<!-- ========================================== -->
+<script type="application/json" id="embedded-quiz-json">
+{
+  "questions": [
+    { "subject": "数学", "q": "一次関数 y = 2x + 3 の傾きはどれ？", "choices": ["3", "2", "-2", "1"], "ans": 1, "explanation": "xの係数である「2」が傾きです。" },
+    { "subject": "数学", "q": "(-3)² - (-2) × 4 の計算結果は？", "choices": ["1", "17", "-1", "-17"], "ans": 1, "explanation": "9 - (-8) = 17 になります。" },
+    { "subject": "数学", "q": "三角形の内角の和は何度？", "choices": ["90度", "180度", "270度", "360度"], "ans": 1, "explanation": "三角形の内角の和は常に180度です。" },
+    { "subject": "理科", "q": "水が水蒸気に状態変化するとき、熱はどうなる？", "choices": ["熱を放出する", "熱を吸収する", "温度は変化しない", "質量が増える"], "ans": 1, "explanation": "気化するときはまわりから熱を吸収します。" },
+    { "subject": "理科", "q": "植物の葉で光合成が行われる細胞内の粒は？", "choices": ["ミトコンドリア", "葉緑体", "液胞", "核"], "ans": 1, "explanation": "光合成を行うのは葉緑体です。" },
+    { "subject": "英語", "q": "「環境」を意味する英単語はどれ？", "choices": ["government", "environment", "development", "movement"], "ans": 1, "explanation": "environment は「環境」です。" },
+    { "subject": "英語", "q": "「〜するつもりだ（予定）」を表す表現は？", "choices": ["be going to", "have to", "used to", "look forward to"], "ans": 0, "explanation": "be going to で予定を表します。" },
+    { "subject": "社会", "q": "1192年（または1185年）に開かれた幕府は？", "choices": ["室町幕府", "江戸幕府", "鎌倉幕府", "平氏政権"], "ans": 2, "explanation": "源頼朝がひらいたのは鎌倉幕府です。" },
+    { "subject": "社会", "q": "日本国憲法の三原則に含まれないものは？", "choices": ["国民主権", "基本的人権の尊重", "平和主義", "三権分立"], "ans": 3, "explanation": "三原則は主権・人権・平和の3つです。" },
+    { "subject": "国語", "q": "「走る」「美しい」のように活用がある自立語は？", "choices": ["体言", "用言", "副詞", "連体詞"], "ans": 1, "explanation": "動詞・形容詞・形容動詞を用言と呼びます。" }
+  ]
+}
+</script>
+
+<script>
+// ==========================================
+// JavaScript ゲーム制御ロジック
+// ==========================================
+const WORKER_URL = "https://nanei-ai.hotaohyeah.workers.dev";
+let baseQuestions = [];
+let questionQueue = [];
+
+function loadEmbeddedJSON() {
+  try {
+    const jsonElement = document.getElementById('embedded-quiz-json');
+    const parsedData = JSON.parse(jsonElement.textContent);
+    if (parsedData && Array.isArray(parsedData.questions)) {
+      baseQuestions = parsedData.questions;
+    }
+  } catch (e) {
+    console.error("内蔵JSONのパースに失敗しました:", e);
+  }
+}
+
+function refillAndShuffleQueue() {
+  const copy = [...baseQuestions];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  questionQueue.push(...copy);
+}
+
+loadEmbeddedJSON();
+refillAndShuffleQueue();
+
+// バックグラウンドでAI Workerから問題取得
+async function fetchQuestionsFromAIInBackground() {
+  try {
+    document.getElementById('ai-status').textContent = 'AI追加プール取得中...';
+    const response = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    if (data && Array.isArray(data.questions)) {
+      baseQuestions.push(...data.questions);
+      questionQueue.push(...data.questions);
+      document.getElementById('ai-status').textContent = `AI連携完了 (${baseQuestions.length}問)`;
+    }
+  } catch (err) {
+    document.getElementById('ai-status').textContent = `ローカルプール (${baseQuestions.length}問)`;
+  }
+}
+
+fetchQuestionsFromAIInBackground();
+
+// ゲームオブジェクト＆制御
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const canvasContainer = document.getElementById('canvas-container');
+const overlayMsg = document.getElementById('overlay-msg');
+const overlayTitle = document.getElementById('overlay-title');
+const overlaySub = document.getElementById('overlay-sub');
+
+const quizArea = document.getElementById('quiz-area');
+const subjectBadge = document.getElementById('subject-badge');
+const quizStats = document.getElementById('quiz-stats');
+const questionText = document.getElementById('question-text');
+const choicesContainer = document.getElementById('choices-container');
+const choiceBtns = document.querySelectorAll('.choice-btn');
+const explanationBox = document.getElementById('explanation-box');
+const explanationText = document.getElementById('explanation-text');
+const expTimerDisplay = document.getElementById('exp-timer');
+const timerBar = document.getElementById('timer-bar');
+
+let isPlaying = false;
+let isGameOver = false;
+let isShowingExplanation = false;
+let expCountdownTimer = null;
+
+// 制限時間関連の変数
+const QUESTION_TIME_LIMIT = 10.0; // 1問あたりの制限時間（秒）
+let timeLeft = QUESTION_TIME_LIMIT;
+let quizTimerInterval = null;
+
+let score = 0;
+let correctCount = 0;
+let gameSpeed = 5.5;
+let maxGameSpeed = 16;
+let frameCount = 0;
+let currentQuestion = null;
+
+function clearAllTimers() {
+  if (expCountdownTimer) {
+    clearInterval(expCountdownTimer);
+    expCountdownTimer = null;
+  }
+  if (quizTimerInterval) {
+    clearInterval(quizTimerInterval);
+    quizTimerInterval = null;
+  }
+  isShowingExplanation = false;
+}
+
+function loadNextQuestion() {
+  clearAllTimers();
+  quizArea.classList.remove('correct-flash', 'wrong-flash');
+  explanationBox.classList.add('hidden');
+  choicesContainer.classList.remove('hidden');
+
+  if (questionQueue.length === 0) {
+    refillAndShuffleQueue();
+  }
+  currentQuestion = questionQueue.shift();
+
+  subjectBadge.textContent = currentQuestion.subject || "問題";
+  questionText.textContent = currentQuestion.q;
+  choiceBtns.forEach((btn, i) => {
+    btn.disabled = false;
+    btn.querySelector('.choice-text').textContent = currentQuestion.choices[i] || "";
+  });
+
+  // 制限時間タイマーのスタート
+  startQuizTimer();
+}
+
+// 制限時間カウントダウン処理
+function startQuizTimer() {
+  timeLeft = QUESTION_TIME_LIMIT;
+  timerBar.style.width = '100%';
+  timerBar.classList.remove('warning');
+
+  const intervalMs = 50; // 0.05秒ごとに更新して滑らかに動かす
+  const decrement = intervalMs / (QUESTION_TIME_LIMIT * 1000);
+
+  quizTimerInterval = setInterval(() => {
+    if (!isPlaying || isGameOver || isShowingExplanation) return;
+
+    timeLeft -= (intervalMs / 1000);
+    const percentage = Math.max(0, (timeLeft / QUESTION_TIME_LIMIT) * 100);
+    timerBar.style.width = `${percentage}%`;
+
+    // 残り3秒以下でバーを赤色に
+    if (timeLeft <= 3.0) {
+      timerBar.classList.add('warning');
+    }
+
+    // タイムアップ時
+    if (timeLeft <= 0) {
+      clearInterval(quizTimerInterval);
+      quizArea.classList.add('wrong-flash');
+      gameOver("タイムアップ！時間切れです");
+    }
+  }, intervalMs);
+}
+
+function showExplanationAndNext() {
+  clearAllTimers(); // タイマーを停止
+  isShowingExplanation = true;
+  let remainingSeconds = 5;
+
+  timerBar.style.width = '100%'; // 解説中はバーを満タン（または非表示）にしておく
+  choicesContainer.classList.add('hidden');
+  explanationBox.classList.remove('hidden');
+  explanationText.textContent = currentQuestion.explanation || "正解です！この調子で走り続けよう！";
+  expTimerDisplay.textContent = `次の問題まで ${remainingSeconds}秒`;
+
+  expCountdownTimer = setInterval(() => {
+    if (!isPlaying || isGameOver) {
+      clearAllTimers();
+      return;
+    }
+    remainingSeconds--;
+    if (remainingSeconds > 0) {
+      expTimerDisplay.textContent = `次の問題まで ${remainingSeconds}秒`;
+    } else {
+      loadNextQuestion();
+    }
+  }, 1000);
+}
+
+function handleAnswer(selectedIndex) {
+  if (!isPlaying || isGameOver || isShowingExplanation || !currentQuestion) return;
+
+  quizArea.classList.remove('correct-flash', 'wrong-flash');
+  void quizArea.offsetWidth;
+
+  if (selectedIndex === currentQuestion.ans) {
+    correctCount++;
+    quizStats.textContent = `正解数: ${correctCount}問`;
+    quizArea.classList.add('correct-flash');
+    showExplanationAndNext();
+  } else {
+    clearAllTimers();
+    quizArea.classList.add('wrong-flash');
+    gameOver(`クイズ不正解！（正解は「${currentQuestion.choices[currentQuestion.ans]}」）`);
+  }
+}
+
+const dino = {
+  x: 50,
+  y: 135,
+  width: 32,
+  height: 36,
+  dy: 0,
+  jumpPower: -11,
+  gravity: 0.6,
+  grounded: true,
+  groundY: 135
+};
+
+let obstacles = [];
+
+function startGame() {
+  clearAllTimers();
+  isPlaying = true;
+  isGameOver = false;
+  score = 0;
+  correctCount = 0;
+  gameSpeed = 5.5;
+  frameCount = 0;
+  obstacles = [];
+  dino.y = dino.groundY;
+  dino.dy = 0;
+  dino.grounded = true;
+
+  quizStats.textContent = `正解数: 0問`;
+  overlayMsg.classList.add('hidden');
+  loadNextQuestion();
+  requestAnimationFrame(update);
+}
+
+function jump() {
+  if (!isPlaying || isGameOver) {
+    startGame();
+    return;
+  }
+  if (dino.grounded) {
+    dino.dy = dino.jumpPower;
+    dino.grounded = false;
+  }
+}
+
+function spawnObstacle() {
+  const height = Math.random() > 0.5 ? 34 : 24;
+  obstacles.push({
+    x: canvas.width,
+    y: dino.groundY + (dino.height - height),
+    width: 18,
+    height: height
+  });
+}
+
+function update() {
+  if (!isPlaying) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 地面の描画
+  ctx.beginPath();
+  ctx.moveTo(0, dino.groundY + dino.height);
+  ctx.lineTo(canvas.width, dino.groundY + dino.height);
+  ctx.strokeStyle = 'gold';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 恐竜の物理演算
+  dino.y += dino.dy;
+  if (dino.y < dino.groundY) {
+    dino.dy += dino.gravity;
+    dino.grounded = false;
+  } else {
+    dino.y = dino.groundY;
+    dino.dy = 0;
+    dino.grounded = true;
+  }
+
+  // 恐竜の描画
+  ctx.fillStyle = 'gold';
+  ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(dino.x + 20, dino.y + 6, 4, 4);
+
+  // 障害物の生成
+  frameCount++;
+  const spawnInterval = Math.max(45, Math.floor(100 - gameSpeed * 3));
+  if (frameCount % spawnInterval === 0) {
+    if (Math.random() > 0.2) spawnObstacle();
+  }
+
+  // 障害物の移動と当たり判定
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    let obs = obstacles[i];
+    obs.x -= gameSpeed;
+
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+    const pad = 4;
+    if (
+      dino.x + pad < obs.x + obs.width - pad &&
+      dino.x + dino.width - pad > obs.x + pad &&
+      dino.y + pad < obs.y + obs.height - pad &&
+      dino.y + dino.height - pad > obs.y + pad
+    ) {
+      clearAllTimers();
+      gameOver("障害物に衝突！");
+      return;
+    }
+
+    if (obs.x + obs.width < 0) {
+      obstacles.splice(i, 1);
+    }
+  }
+
+  // スコア加算＆スピードアップ
+  score += 1;
+  if (gameSpeed < maxGameSpeed) {
+    gameSpeed += 0.0025;
+  }
+
+  ctx.fillStyle = 'gold';
+  ctx.font = 'bold 14px "Yu Gothic", sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`SCORE: ${Math.floor(score)} (SPEED: ${gameSpeed.toFixed(1)})`, canvas.width - 15, 25);
+
+  requestAnimationFrame(update);
+}
+
+function gameOver(reason) {
+  isPlaying = false;
+  isGameOver = true;
+  clearAllTimers();
+  timerBar.style.width = '0%';
+  overlayTitle.textContent = 'GAME OVER';
+  overlaySub.innerHTML = `${reason}<br>スコア: ${Math.floor(score)} | 正解数: ${correctCount}問<br><br><b>[ タップまたはSpaceキーでリトライ ]</b>`;
+  overlayMsg.classList.remove('hidden');
+}
+
+// イベントリスナー
+canvasContainer.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  jump();
+});
+
+choiceBtns.forEach((btn) => {
+  btn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    handleAnswer(Number(btn.dataset.index));
+  });
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    jump();
+  }
+  if (['1', '2', '3', '4'].includes(e.key)) {
+    handleAnswer(Number(e.key) - 1);
+  }
+});
+</script>
+</body>
+</html>
