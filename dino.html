@@ -3,22 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Dino AI Quiz - 制限時間付きランゲーム</title>
+<title>Dino AI Quiz - Firebase無限問題プール版</title>
 <style>
-  /* ==========================================
-     ご提示いただいた基本スタイルを適用
-     ========================================== */
   body{
     margin:0;
     color:white;
     font-family:"Yu Gothic",sans-serif;
-
     background-image:url("images/nanei.jpg");
     background-size:cover;
     background-position:center;
     background-attachment:fixed;
     background-color: #111;
-
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -27,7 +22,6 @@
     touch-action: manipulation;
   }
 
-  /* 上部タイトル */
   header{
     text-align:center;
     background:rgba(0,0,0,0.8);
@@ -43,7 +37,6 @@
     font-size: 20px;
   }
 
-  /* コンテンツ枠（ゲーム全体のラッパー） */
   .card{
     background:rgba(0,0,0,0.85);
     margin:20px;
@@ -58,7 +51,6 @@
     margin-top: 80px;
   }
 
-  /* ボタン */
   button{
     background:gold;
     color:black;
@@ -80,37 +72,11 @@
     cursor: default;
   }
 
-  /* 入力欄・セレクト */
-  input, select{
-    width:100%;
-    max-width:400px;
-    padding:10px;
-    border-radius:8px;
-    border:none;
-    font-family:"Yu Gothic",sans-serif;
-  }
-
-  /* リンク */
-  a{
-    text-decoration:none;
-    color: gold;
-  }
-
-  /* 動画・音楽・画像 */
-  video, audio, img{
-    width:100%;
-    border-radius:10px;
-    max-width:100%;
-  }
-
-  /* 見出し */
   h1, h2, h3{
     color:gold;
   }
 
-  /* ==========================================
-     ゲーム固有のレイアウトパーツ
-     ========================================== */
+  /* クイズエリア */
   #quiz-area {
     background: rgba(0, 0, 0, 0.4);
     border-bottom: 2px solid rgba(255, 215, 0, 0.3);
@@ -144,7 +110,7 @@
     transition: width 0.1s linear;
   }
   #timer-bar.warning {
-    background: #ef4444; /* 残り時間が少ない時は赤色に */
+    background: #ef4444;
   }
 
   .quiz-header {
@@ -251,7 +217,7 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* 下部：ゲームエリア */
+  /* ゲームエリア */
   #canvas-container {
     position: relative;
     width: 100%;
@@ -290,7 +256,6 @@
   }
   .hidden { display: none !important; }
 
-  /* フッター */
   footer{
     text-align:center;
     padding:15px;
@@ -311,7 +276,6 @@
 <div class="card" id="game-wrapper">
   <!-- 問題＆解説表示エリア -->
   <div id="quiz-area">
-    <!-- 制限時間バー -->
     <div id="timer-bar-container">
       <div id="timer-bar"></div>
     </div>
@@ -322,7 +286,7 @@
           <span id="subject-badge" class="subject-badge">中学全範囲</span>
           <span id="quiz-stats" style="margin-left: 8px;">正解数: 0問</span>
         </div>
-        <span id="ai-status">プール準備完了</span>
+        <span id="ai-status">Firebase 接続中...</span>
       </div>
       <p id="question-text">準備完了！下のゲーム画面をタップしてスタート</p>
     </div>
@@ -345,7 +309,7 @@
     </div>
   </div>
 
-  <!-- ゲームエリア（タップでジャンプ） -->
+  <!-- ゲームエリア -->
   <div id="canvas-container">
     <canvas id="gameCanvas" width="720" height="200"></canvas>
     <div id="overlay-msg">
@@ -364,9 +328,7 @@
   &copy; NANEI AI Learning System
 </footer>
 
-<!-- ========================================== -->
-<!-- 大量問題プール（JSON）                       -->
-<!-- ========================================== -->
+<!-- 内蔵の初期問題JSONデータ -->
 <script type="application/json" id="embedded-quiz-json">
 {
   "questions": [
@@ -384,365 +346,401 @@
 }
 </script>
 
-<script>
-// ==========================================
-// JavaScript ゲーム制御ロジック
-// ==========================================
-const WORKER_URL = "https://nanei-ai.hotaohyeah.workers.dev";
-let baseQuestions = [];
-let questionQueue = [];
+<!-- ========================================== -->
+<!-- Firebase SDK (type="module" で直接読み込み)  -->
+<!-- ========================================== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, get, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-function loadEmbeddedJSON() {
-  try {
-    const jsonElement = document.getElementById('embedded-quiz-json');
-    const parsedData = JSON.parse(jsonElement.textContent);
-    if (parsedData && Array.isArray(parsedData.questions)) {
-      baseQuestions = parsedData.questions;
+  // あなたのFirebase設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7C2Vz4IHK0OvF-tpDfxtkKxURHrQIJ4g",
+    authDomain: "q-pool.firebaseapp.com",
+    databaseURL: "https://q-pool-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "q-pool",
+    storageBucket: "q-pool.firebasestorage.app",
+    messagingSenderId: "737918955662",
+    appId: "1:737918955662:web:556fdeb24b6751509199df",
+    measurementId: "G-T807HHVX9H"
+  };
+
+  // Firebase 初期化
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const questionsRef = ref(db, "questions");
+
+  const WORKER_URL = "https://nanei-ai.hotaohyeah.workers.dev";
+  let baseQuestions = [];
+  let questionQueue = [];
+
+  // 1. 内蔵JSONの読み込み
+  function loadEmbeddedJSON() {
+    try {
+      const jsonElement = document.getElementById('embedded-quiz-json');
+      const parsedData = JSON.parse(jsonElement.textContent);
+      if (parsedData && Array.isArray(parsedData.questions)) {
+        baseQuestions = parsedData.questions;
+      }
+    } catch (e) {
+      console.error("内蔵JSONのパースに失敗:", e);
     }
-  } catch (e) {
-    console.error("内蔵JSONのパースに失敗しました:", e);
   }
-}
 
-function refillAndShuffleQueue() {
-  const copy = [...baseQuestions];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  questionQueue.push(...copy);
-}
-
-loadEmbeddedJSON();
-refillAndShuffleQueue();
-
-// バックグラウンドでAI Workerから問題取得
-async function fetchQuestionsFromAIInBackground() {
-  try {
-    document.getElementById('ai-status').textContent = 'AI追加プール取得中...';
-    const response = await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" }
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    if (data && Array.isArray(data.questions)) {
-      baseQuestions.push(...data.questions);
-      questionQueue.push(...data.questions);
-      document.getElementById('ai-status').textContent = `AI連携完了 (${baseQuestions.length}問)`;
+  function refillAndShuffleQueue() {
+    const copy = [...baseQuestions];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-  } catch (err) {
-    document.getElementById('ai-status').textContent = `ローカルプール (${baseQuestions.length}問)`;
+    questionQueue.push(...copy);
   }
-}
 
-fetchQuestionsFromAIInBackground();
+  loadEmbeddedJSON();
+  refillAndShuffleQueue();
 
-// ゲームオブジェクト＆制御
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const canvasContainer = document.getElementById('canvas-container');
-const overlayMsg = document.getElementById('overlay-msg');
-const overlayTitle = document.getElementById('overlay-title');
-const overlaySub = document.getElementById('overlay-sub');
-
-const quizArea = document.getElementById('quiz-area');
-const subjectBadge = document.getElementById('subject-badge');
-const quizStats = document.getElementById('quiz-stats');
-const questionText = document.getElementById('question-text');
-const choicesContainer = document.getElementById('choices-container');
-const choiceBtns = document.querySelectorAll('.choice-btn');
-const explanationBox = document.getElementById('explanation-box');
-const explanationText = document.getElementById('explanation-text');
-const expTimerDisplay = document.getElementById('exp-timer');
-const timerBar = document.getElementById('timer-bar');
-
-let isPlaying = false;
-let isGameOver = false;
-let isShowingExplanation = false;
-let expCountdownTimer = null;
-
-// 制限時間関連の変数
-const QUESTION_TIME_LIMIT = 10.0; // 1問あたりの制限時間（秒）
-let timeLeft = QUESTION_TIME_LIMIT;
-let quizTimerInterval = null;
-
-let score = 0;
-let correctCount = 0;
-let gameSpeed = 5.5;
-let maxGameSpeed = 16;
-let frameCount = 0;
-let currentQuestion = null;
-
-function clearAllTimers() {
-  if (expCountdownTimer) {
-    clearInterval(expCountdownTimer);
-    expCountdownTimer = null;
+  // 2. Firebase Realtime Database からストック済みの問題をすべて取得
+  async function loadFromFirebaseDB() {
+    try {
+      const snapshot = await get(questionsRef);
+      if (snapshot.exists()) {
+        const dataObj = snapshot.val();
+        const dbQuestions = Object.values(dataObj);
+        baseQuestions.push(...dbQuestions);
+        refillAndShuffleQueue();
+        document.getElementById('ai-status').textContent = `DB接続完了 (全${baseQuestions.length}問ストック中)`;
+      } else {
+        document.getElementById('ai-status').textContent = `DB接続完了 (初期${baseQuestions.length}問)`;
+      }
+    } catch (err) {
+      console.warn("Firebase読み込みエラー:", err);
+      document.getElementById('ai-status').textContent = `ローカルモード (${baseQuestions.length}問)`;
+    }
   }
-  if (quizTimerInterval) {
-    clearInterval(quizTimerInterval);
-    quizTimerInterval = null;
+
+  // 3. AI Worker で新しい問題を生成し、Firebase に自動保存（永遠に増やす処理）
+  async function generateAndSaveToFirebase() {
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data && Array.isArray(data.questions)) {
+        for (const newQ of data.questions) {
+          // 1問ずつ Firebase Realtime Database に永続保存
+          await push(questionsRef, newQ);
+          // 現在のプレイプールにも即座に追加
+          baseQuestions.push(newQ);
+          questionQueue.push(newQ);
+        }
+        document.getElementById('ai-status').textContent = `AI問題追加＆DB保存完了 (計${baseQuestions.length}問)`;
+      }
+    } catch (err) {
+      console.warn("AI Worker生成スキップ:", err);
+    }
   }
-  isShowingExplanation = false;
-}
 
-function loadNextQuestion() {
-  clearAllTimers();
-  quizArea.classList.remove('correct-flash', 'wrong-flash');
-  explanationBox.classList.add('hidden');
-  choicesContainer.classList.remove('hidden');
-
-  if (questionQueue.length === 0) {
-    refillAndShuffleQueue();
-  }
-  currentQuestion = questionQueue.shift();
-
-  subjectBadge.textContent = currentQuestion.subject || "問題";
-  questionText.textContent = currentQuestion.q;
-  choiceBtns.forEach((btn, i) => {
-    btn.disabled = false;
-    btn.querySelector('.choice-text').textContent = currentQuestion.choices[i] || "";
+  // 起動時にDB読み込み＆裏側でAI生成・保存を実行
+  loadFromFirebaseDB().then(() => {
+    generateAndSaveToFirebase();
   });
 
-  // 制限時間タイマーのスタート
-  startQuizTimer();
-}
+  // ==========================================
+  // ゲームロジック本体
+  // ==========================================
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const canvasContainer = document.getElementById('canvas-container');
+  const overlayMsg = document.getElementById('overlay-msg');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlaySub = document.getElementById('overlay-sub');
 
-// 制限時間カウントダウン処理
-function startQuizTimer() {
-  timeLeft = QUESTION_TIME_LIMIT;
-  timerBar.style.width = '100%';
-  timerBar.classList.remove('warning');
+  const quizArea = document.getElementById('quiz-area');
+  const subjectBadge = document.getElementById('subject-badge');
+  const quizStats = document.getElementById('quiz-stats');
+  const questionText = document.getElementById('question-text');
+  const choicesContainer = document.getElementById('choices-container');
+  const choiceBtns = document.querySelectorAll('.choice-btn');
+  const explanationBox = document.getElementById('explanation-box');
+  const explanationText = document.getElementById('explanation-text');
+  const expTimerDisplay = document.getElementById('exp-timer');
+  const timerBar = document.getElementById('timer-bar');
 
-  const intervalMs = 50; // 0.05秒ごとに更新して滑らかに動かす
-  const decrement = intervalMs / (QUESTION_TIME_LIMIT * 1000);
+  let isPlaying = false;
+  let isGameOver = false;
+  let isShowingExplanation = false;
+  let expCountdownTimer = null;
 
-  quizTimerInterval = setInterval(() => {
-    if (!isPlaying || isGameOver || isShowingExplanation) return;
+  const QUESTION_TIME_LIMIT = 10.0;
+  let timeLeft = QUESTION_TIME_LIMIT;
+  let quizTimerInterval = null;
 
-    timeLeft -= (intervalMs / 1000);
-    const percentage = Math.max(0, (timeLeft / QUESTION_TIME_LIMIT) * 100);
-    timerBar.style.width = `${percentage}%`;
+  let score = 0;
+  let correctCount = 0;
+  let gameSpeed = 5.5;
+  let maxGameSpeed = 16;
+  let frameCount = 0;
+  let currentQuestion = null;
 
-    // 残り3秒以下でバーを赤色に
-    if (timeLeft <= 3.0) {
-      timerBar.classList.add('warning');
+  function clearAllTimers() {
+    if (expCountdownTimer) {
+      clearInterval(expCountdownTimer);
+      expCountdownTimer = null;
     }
-
-    // タイムアップ時
-    if (timeLeft <= 0) {
+    if (quizTimerInterval) {
       clearInterval(quizTimerInterval);
-      quizArea.classList.add('wrong-flash');
-      gameOver("タイムアップ！時間切れです");
+      quizTimerInterval = null;
     }
-  }, intervalMs);
-}
+    isShowingExplanation = false;
+  }
 
-function showExplanationAndNext() {
-  clearAllTimers(); // タイマーを停止
-  isShowingExplanation = true;
-  let remainingSeconds = 5;
-
-  timerBar.style.width = '100%'; // 解説中はバーを満タン（または非表示）にしておく
-  choicesContainer.classList.add('hidden');
-  explanationBox.classList.remove('hidden');
-  explanationText.textContent = currentQuestion.explanation || "正解です！この調子で走り続けよう！";
-  expTimerDisplay.textContent = `次の問題まで ${remainingSeconds}秒`;
-
-  expCountdownTimer = setInterval(() => {
-    if (!isPlaying || isGameOver) {
-      clearAllTimers();
-      return;
-    }
-    remainingSeconds--;
-    if (remainingSeconds > 0) {
-      expTimerDisplay.textContent = `次の問題まで ${remainingSeconds}秒`;
-    } else {
-      loadNextQuestion();
-    }
-  }, 1000);
-}
-
-function handleAnswer(selectedIndex) {
-  if (!isPlaying || isGameOver || isShowingExplanation || !currentQuestion) return;
-
-  quizArea.classList.remove('correct-flash', 'wrong-flash');
-  void quizArea.offsetWidth;
-
-  if (selectedIndex === currentQuestion.ans) {
-    correctCount++;
-    quizStats.textContent = `正解数: ${correctCount}問`;
-    quizArea.classList.add('correct-flash');
-    showExplanationAndNext();
-  } else {
+  function loadNextQuestion() {
     clearAllTimers();
-    quizArea.classList.add('wrong-flash');
-    gameOver(`クイズ不正解！（正解は「${currentQuestion.choices[currentQuestion.ans]}」）`);
+    quizArea.classList.remove('correct-flash', 'wrong-flash');
+    explanationBox.classList.add('hidden');
+    choicesContainer.classList.remove('hidden');
+
+    if (questionQueue.length === 0) {
+      refillAndShuffleQueue();
+    }
+    currentQuestion = questionQueue.shift();
+
+    subjectBadge.textContent = currentQuestion.subject || "問題";
+    questionText.textContent = currentQuestion.q;
+    choiceBtns.forEach((btn, i) => {
+      btn.disabled = false;
+      btn.querySelector('.choice-text').textContent = currentQuestion.choices[i] || "";
+    });
+
+    startQuizTimer();
   }
-}
 
-const dino = {
-  x: 50,
-  y: 135,
-  width: 32,
-  height: 36,
-  dy: 0,
-  jumpPower: -11,
-  gravity: 0.6,
-  grounded: true,
-  groundY: 135
-};
+  function startQuizTimer() {
+    timeLeft = QUESTION_TIME_LIMIT;
+    timerBar.style.width = '100%';
+    timerBar.classList.remove('warning');
 
-let obstacles = [];
+    const intervalMs = 50;
+    quizTimerInterval = setInterval(() => {
+      if (!isPlaying || isGameOver || isShowingExplanation) return;
 
-function startGame() {
-  clearAllTimers();
-  isPlaying = true;
-  isGameOver = false;
-  score = 0;
-  correctCount = 0;
-  gameSpeed = 5.5;
-  frameCount = 0;
-  obstacles = [];
-  dino.y = dino.groundY;
-  dino.dy = 0;
-  dino.grounded = true;
+      timeLeft -= (intervalMs / 1000);
+      const percentage = Math.max(0, (timeLeft / QUESTION_TIME_LIMIT) * 100);
+      timerBar.style.width = `${percentage}%`;
 
-  quizStats.textContent = `正解数: 0問`;
-  overlayMsg.classList.add('hidden');
-  loadNextQuestion();
-  requestAnimationFrame(update);
-}
+      if (timeLeft <= 3.0) {
+        timerBar.classList.add('warning');
+      }
 
-function jump() {
-  if (!isPlaying || isGameOver) {
-    startGame();
-    return;
+      if (timeLeft <= 0) {
+        clearInterval(quizTimerInterval);
+        quizArea.classList.add('wrong-flash');
+        gameOver("タイムアップ！時間切れです");
+      }
+    }, intervalMs);
   }
-  if (dino.grounded) {
-    dino.dy = dino.jumpPower;
-    dino.grounded = false;
+
+  function showExplanationAndNext() {
+    clearAllTimers();
+    isShowingExplanation = true;
+    let remainingSeconds = 5;
+
+    timerBar.style.width = '100%';
+    choicesContainer.classList.add('hidden');
+    explanationBox.classList.remove('hidden');
+    explanationText.textContent = currentQuestion.explanation || "正解です！この調子で走り続けよう！";
+    expTimerDisplay.textContent = `次の問題まで ${remainingSeconds}秒`;
+
+    expCountdownTimer = setInterval(() => {
+      if (!isPlaying || isGameOver) {
+        clearAllTimers();
+        return;
+      }
+      remainingSeconds--;
+      if (remainingSeconds > 0) {
+        expTimerDisplay.textContent = `次の問題まで ${remainingSeconds}秒`;
+      } else {
+        loadNextQuestion();
+      }
+    }, 1000);
   }
-}
 
-function spawnObstacle() {
-  const height = Math.random() > 0.5 ? 34 : 24;
-  obstacles.push({
-    x: canvas.width,
-    y: dino.groundY + (dino.height - height),
-    width: 18,
-    height: height
-  });
-}
+  function handleAnswer(selectedIndex) {
+    if (!isPlaying || isGameOver || isShowingExplanation || !currentQuestion) return;
 
-function update() {
-  if (!isPlaying) return;
+    quizArea.classList.remove('correct-flash', 'wrong-flash');
+    void quizArea.offsetWidth;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (selectedIndex === currentQuestion.ans) {
+      correctCount++;
+      quizStats.textContent = `正解数: ${correctCount}問`;
+      quizArea.classList.add('correct-flash');
+      showExplanationAndNext();
+    } else {
+      clearAllTimers();
+      quizArea.classList.add('wrong-flash');
+      gameOver(`クイズ不正解！（正解は「${currentQuestion.choices[currentQuestion.ans]}」）`);
+    }
+  }
 
-  // 地面の描画
-  ctx.beginPath();
-  ctx.moveTo(0, dino.groundY + dino.height);
-  ctx.lineTo(canvas.width, dino.groundY + dino.height);
-  ctx.strokeStyle = 'gold';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  const dino = {
+    x: 50,
+    y: 135,
+    width: 32,
+    height: 36,
+    dy: 0,
+    jumpPower: -11,
+    gravity: 0.6,
+    grounded: true,
+    groundY: 135
+  };
 
-  // 恐竜の物理演算
-  dino.y += dino.dy;
-  if (dino.y < dino.groundY) {
-    dino.dy += dino.gravity;
-    dino.grounded = false;
-  } else {
+  let obstacles = [];
+
+  function startGame() {
+    clearAllTimers();
+    isPlaying = true;
+    isGameOver = false;
+    score = 0;
+    correctCount = 0;
+    gameSpeed = 5.5;
+    frameCount = 0;
+    obstacles = [];
     dino.y = dino.groundY;
     dino.dy = 0;
     dino.grounded = true;
+
+    quizStats.textContent = `正解数: 0問`;
+    overlayMsg.classList.add('hidden');
+    loadNextQuestion();
+    requestAnimationFrame(update);
   }
 
-  // 恐竜の描画
-  ctx.fillStyle = 'gold';
-  ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
-  ctx.fillStyle = '#111';
-  ctx.fillRect(dino.x + 20, dino.y + 6, 4, 4);
-
-  // 障害物の生成
-  frameCount++;
-  const spawnInterval = Math.max(45, Math.floor(100 - gameSpeed * 3));
-  if (frameCount % spawnInterval === 0) {
-    if (Math.random() > 0.2) spawnObstacle();
-  }
-
-  // 障害物の移動と当たり判定
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    let obs = obstacles[i];
-    obs.x -= gameSpeed;
-
-    ctx.fillStyle = '#f43f5e';
-    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-
-    const pad = 4;
-    if (
-      dino.x + pad < obs.x + obs.width - pad &&
-      dino.x + dino.width - pad > obs.x + pad &&
-      dino.y + pad < obs.y + obs.height - pad &&
-      dino.y + dino.height - pad > obs.y + pad
-    ) {
-      clearAllTimers();
-      gameOver("障害物に衝突！");
+  function jump() {
+    if (!isPlaying || isGameOver) {
+      startGame();
       return;
     }
-
-    if (obs.x + obs.width < 0) {
-      obstacles.splice(i, 1);
+    if (dino.grounded) {
+      dino.dy = dino.jumpPower;
+      dino.grounded = false;
     }
   }
 
-  // スコア加算＆スピードアップ
-  score += 1;
-  if (gameSpeed < maxGameSpeed) {
-    gameSpeed += 0.0025;
+  function spawnObstacle() {
+    const height = Math.random() > 0.5 ? 34 : 24;
+    obstacles.push({
+      x: canvas.width,
+      y: dino.groundY + (dino.height - height),
+      width: 18,
+      height: height
+    });
   }
 
-  ctx.fillStyle = 'gold';
-  ctx.font = 'bold 14px "Yu Gothic", sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(`SCORE: ${Math.floor(score)} (SPEED: ${gameSpeed.toFixed(1)})`, canvas.width - 15, 25);
+  function update() {
+    if (!isPlaying) return;
 
-  requestAnimationFrame(update);
-}
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-function gameOver(reason) {
-  isPlaying = false;
-  isGameOver = true;
-  clearAllTimers();
-  timerBar.style.width = '0%';
-  overlayTitle.textContent = 'GAME OVER';
-  overlaySub.innerHTML = `${reason}<br>スコア: ${Math.floor(score)} | 正解数: ${correctCount}問<br><br><b>[ タップまたはSpaceキーでリトライ ]</b>`;
-  overlayMsg.classList.remove('hidden');
-}
+    ctx.beginPath();
+    ctx.moveTo(0, dino.groundY + dino.height);
+    ctx.lineTo(canvas.width, dino.groundY + dino.height);
+    ctx.strokeStyle = 'gold';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-// イベントリスナー
-canvasContainer.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  jump();
-});
+    dino.y += dino.dy;
+    if (dino.y < dino.groundY) {
+      dino.dy += dino.gravity;
+      dino.grounded = false;
+    } else {
+      dino.y = dino.groundY;
+      dino.dy = 0;
+      dino.grounded = true;
+    }
 
-choiceBtns.forEach((btn) => {
-  btn.addEventListener('pointerdown', (e) => {
-    e.stopPropagation();
-    handleAnswer(Number(btn.dataset.index));
-  });
-});
+    ctx.fillStyle = 'gold';
+    ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(dino.x + 20, dino.y + 6, 4, 4);
 
-window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    frameCount++;
+    const spawnInterval = Math.max(45, Math.floor(100 - gameSpeed * 3));
+    if (frameCount % spawnInterval === 0) {
+      if (Math.random() > 0.2) spawnObstacle();
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      let obs = obstacles[i];
+      obs.x -= gameSpeed;
+
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+      const pad = 4;
+      if (
+        dino.x + pad < obs.x + obs.width - pad &&
+        dino.x + dino.width - pad > obs.x + pad &&
+        dino.y + pad < obs.y + obs.height - pad &&
+        dino.y + dino.height - pad > obs.y + pad
+      ) {
+        clearAllTimers();
+        gameOver("障害物に衝突！");
+        return;
+      }
+
+      if (obs.x + obs.width < 0) {
+        obstacles.splice(i, 1);
+      }
+    }
+
+    score += 1;
+    if (gameSpeed < maxGameSpeed) {
+      gameSpeed += 0.0025;
+    }
+
+    ctx.fillStyle = 'gold';
+    ctx.font = 'bold 14px "Yu Gothic", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`SCORE: ${Math.floor(score)} (SPEED: ${gameSpeed.toFixed(1)})`, canvas.width - 15, 25);
+
+    requestAnimationFrame(update);
+  }
+
+  function gameOver(reason) {
+    isPlaying = false;
+    isGameOver = true;
+    clearAllTimers();
+    timerBar.style.width = '0%';
+    overlayTitle.textContent = 'GAME OVER';
+    overlaySub.innerHTML = `${reason}<br>スコア: ${Math.floor(score)} | 正解数: ${correctCount}問<br><br><b>[ タップまたはSpaceキーでリトライ ]</b>`;
+    overlayMsg.classList.remove('hidden');
+  }
+
+  canvasContainer.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     jump();
-  }
-  if (['1', '2', '3', '4'].includes(e.key)) {
-    handleAnswer(Number(e.key) - 1);
-  }
-});
+  });
+
+  choiceBtns.forEach((btn) => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      handleAnswer(Number(btn.dataset.index));
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+      e.preventDefault();
+      jump();
+    }
+    if (['1', '2', '3', '4'].includes(e.key)) {
+      handleAnswer(Number(e.key) - 1);
+    }
+  });
 </script>
 </body>
 </html>
