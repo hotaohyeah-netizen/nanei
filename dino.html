@@ -366,57 +366,66 @@
   const questionsRef = ref(db, "questions");
 
   const WORKER_URL = "https://nanei-ai.hotaohyeah.workers.dev";
-  let baseQuestions = [];
-  let questionQueue = [];
+  let allQuestionsPool = [];
+  let lastQuestionText = "";
 
+  // 1. 内蔵JSONの読み込み
   function loadEmbeddedJSON() {
     try {
       const jsonElement = document.getElementById('embedded-quiz-json');
       const parsedData = JSON.parse(jsonElement.textContent);
       if (parsedData && Array.isArray(parsedData.questions)) {
-        baseQuestions = parsedData.questions;
+        allQuestionsPool.push(...parsedData.questions);
       }
     } catch (e) {
       console.error("内蔵JSONのパースに失敗:", e);
     }
   }
 
-  function refillAndShuffleQueue() {
-    const copy = [...baseQuestions];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    questionQueue.push(...copy);
+  // 全問題プールから完全ランダムに1問選ぶ（直前の問題との連続だけ防止）
+  function pickRandomQuestion() {
+    if (allQuestionsPool.length === 0) return null;
+    if (allQuestionsPool.length === 1) return allQuestionsPool[0];
+
+    let candidate;
+    let attempts = 0;
+    do {
+      const randomIndex = Math.floor(Math.random() * allQuestionsPool.length);
+      candidate = allQuestionsPool[randomIndex];
+      attempts++;
+    } while (candidate.q === lastQuestionText && attempts < 10);
+
+    lastQuestionText = candidate.q;
+    return candidate;
   }
 
   loadEmbeddedJSON();
-  refillAndShuffleQueue();
 
+  // 2. Firebase Realtime Database からストック済みの問題をすべて取得してプールに合体
   async function loadFromFirebaseDB() {
     try {
       const snapshot = await get(questionsRef);
       if (snapshot.exists()) {
         const dataObj = snapshot.val();
         const dbQuestions = Object.values(dataObj);
-        baseQuestions.push(...dbQuestions);
-        refillAndShuffleQueue();
-        document.getElementById('ai-status').textContent = `DB接続完了 (全${baseQuestions.length}問ストック中)`;
+        allQuestionsPool.push(...dbQuestions);
+        document.getElementById('ai-status').textContent = `DB接続完了 (全${allQuestionsPool.length}問ランダム)`;
       } else {
-        document.getElementById('ai-status').textContent = `DB接続完了 (初期${baseQuestions.length}問)`;
+        document.getElementById('ai-status').textContent = `DB接続完了 (初期${allQuestionsPool.length}問ランダム)`;
       }
     } catch (err) {
       console.warn("Firebase読み込みエラー:", err);
-      document.getElementById('ai-status').textContent = `ローカルモード (${baseQuestions.length}問)`;
+      document.getElementById('ai-status').textContent = `ローカルモード (${allQuestionsPool.length}問)`;
     }
   }
 
+  // 3. AI Worker で新しい問題を生成し、Firebase に自動保存＆即座にランダムプールへ追加
   async function generateAndSaveToFirebase() {
     try {
       document.getElementById('ai-status').textContent = 'AIで問題生成中...';
 
       const prompt = `
-中学レベルの学習クイズを3問作成してください。
+中学レベルの学習クイズを3問作成してください。教科（数学・理科・英語・社会・国語）はランダムに選んでください。
 必ず次のJSON形式のみを出力し、前後に余分な文章やコードブロック記号は付けないでください。
 
 {
@@ -478,18 +487,17 @@
               explanation: newQ.explanation || ""
             };
             await push(questionsRef, cleanQ);
-            baseQuestions.push(cleanQ);
-            questionQueue.push(cleanQ);
+            allQuestionsPool.push(cleanQ);
             addedCount++;
           }
         }
         document.getElementById('ai-status').textContent =
-          `AI追加+${addedCount}問 (計${baseQuestions.length}問)`;
+          `AI追加+${addedCount}問 (計${allQuestionsPool.length}問ランダム)`;
       }
     } catch (err) {
       console.warn("AI生成・保存エラー:", err);
       document.getElementById('ai-status').textContent =
-        `DB/ローカル稼働中 (${baseQuestions.length}問)`;
+        `DB/ローカル稼働中 (${allQuestionsPool.length}問ランダム)`;
     }
   }
 
@@ -552,10 +560,8 @@
     explanationBox.classList.add('hidden');
     choicesContainer.classList.remove('hidden');
 
-    if (questionQueue.length === 0) {
-      refillAndShuffleQueue();
-    }
-    currentQuestion = questionQueue.shift();
+    currentQuestion = pickRandomQuestion();
+    if (!currentQuestion) return;
 
     subjectBadge.textContent = currentQuestion.subject || "問題";
     questionText.textContent = currentQuestion.q;
