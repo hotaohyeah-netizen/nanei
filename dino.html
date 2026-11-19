@@ -346,14 +346,10 @@
 }
 </script>
 
-<!-- ========================================== -->
-<!-- Firebase SDK (type="module" で直接読み込み)  -->
-<!-- ========================================== -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, get, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  // あなたのFirebase設定
   const firebaseConfig = {
     apiKey: "AIzaSyA7C2Vz4IHK0OvF-tpDfxtkKxURHrQIJ4g",
     authDomain: "q-pool.firebaseapp.com",
@@ -365,7 +361,6 @@
     measurementId: "G-T807HHVX9H"
   };
 
-  // Firebase 初期化
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const questionsRef = ref(db, "questions");
@@ -374,7 +369,6 @@
   let baseQuestions = [];
   let questionQueue = [];
 
-  // 1. 内蔵JSONの読み込み
   function loadEmbeddedJSON() {
     try {
       const jsonElement = document.getElementById('embedded-quiz-json');
@@ -399,7 +393,6 @@
   loadEmbeddedJSON();
   refillAndShuffleQueue();
 
-  // 2. Firebase Realtime Database からストック済みの問題をすべて取得
   async function loadFromFirebaseDB() {
     try {
       const snapshot = await get(questionsRef);
@@ -418,32 +411,88 @@
     }
   }
 
-  // 3. AI Worker で新しい問題を生成し、Firebase に自動保存（永遠に増やす処理）
   async function generateAndSaveToFirebase() {
     try {
+      document.getElementById('ai-status').textContent = 'AIで問題生成中...';
+
+      const prompt = `
+中学レベルの学習クイズを3問作成してください。
+必ず次のJSON形式のみを出力し、前後に余分な文章やコードブロック記号は付けないでください。
+
+{
+  "questions": [
+    {
+      "subject": "数学",
+      "q": "問題文",
+      "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
+      "ans": 0,
+      "explanation": "簡潔な解説"
+    }
+  ]
+}
+※ ans は正解の選択肢のインデックス（0〜3の整数）にしてください。
+`;
+
       const response = await fetch(WORKER_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ]
+        })
       });
-      if (!response.ok) return;
 
-      const data = await response.json();
-      if (data && Array.isArray(data.questions)) {
-        for (const newQ of data.questions) {
-          // 1問ずつ Firebase Realtime Database に永続保存
-          await push(questionsRef, newQ);
-          // 現在のプレイプールにも即座に追加
-          baseQuestions.push(newQ);
-          questionQueue.push(newQ);
+      if (!response.ok) {
+        throw new Error(`Worker HTTP ${response.status}`);
+      }
+
+      const geminiData = await response.json();
+      const rawText =
+        geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      const cleanedText = rawText
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/g, "")
+        .trim();
+
+      const parsed = JSON.parse(cleanedText);
+
+      if (parsed && Array.isArray(parsed.questions)) {
+        let addedCount = 0;
+        for (const newQ of parsed.questions) {
+          if (
+            newQ &&
+            typeof newQ.q === "string" &&
+            Array.isArray(newQ.choices) &&
+            newQ.choices.length === 4 &&
+            typeof newQ.ans === "number"
+          ) {
+            const cleanQ = {
+              subject: newQ.subject || "AI問題",
+              q: newQ.q,
+              choices: newQ.choices,
+              ans: newQ.ans,
+              explanation: newQ.explanation || ""
+            };
+            await push(questionsRef, cleanQ);
+            baseQuestions.push(cleanQ);
+            questionQueue.push(cleanQ);
+            addedCount++;
+          }
         }
-        document.getElementById('ai-status').textContent = `AI問題追加＆DB保存完了 (計${baseQuestions.length}問)`;
+        document.getElementById('ai-status').textContent =
+          `AI追加+${addedCount}問 (計${baseQuestions.length}問)`;
       }
     } catch (err) {
-      console.warn("AI Worker生成スキップ:", err);
+      console.warn("AI生成・保存エラー:", err);
+      document.getElementById('ai-status').textContent =
+        `DB/ローカル稼働中 (${baseQuestions.length}問)`;
     }
   }
 
-  // 起動時にDB読み込み＆裏側でAI生成・保存を実行
   loadFromFirebaseDB().then(() => {
     generateAndSaveToFirebase();
   });
