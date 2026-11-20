@@ -54,16 +54,27 @@
   /* 量産コントロールバー */
   .farm-bar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 6px;
     background: rgba(255, 215, 0, 0.08);
     border: 1px solid rgba(255, 215, 0, 0.3);
     border-radius: 10px;
     padding: 8px 12px;
     margin-bottom: 12px;
     font-size: 12px;
+  }
+  .farm-top-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .farm-counts-row {
+    color: #fde68a;
+    font-weight: bold;
+    font-size: 11px;
+    letter-spacing: 0.02em;
   }
   .farm-buttons {
     display: flex;
@@ -326,10 +337,15 @@
 
     <div>
       <div class="farm-bar">
-        <span id="pool-goal-text">プール: 確認中... / 目標 3,000問</span>
-        <div class="farm-buttons">
-          <button type="button" class="small-btn" id="btn-gen-now">+5問 生成</button>
-          <button type="button" class="small-btn" id="btn-auto-farm">自動量産: OFF</button>
+        <div class="farm-top-row">
+          <span id="pool-goal-text">プール: 確認中... / 目標 3,000問</span>
+          <div class="farm-buttons">
+            <button type="button" class="small-btn" id="btn-gen-now">+5問 生成</button>
+            <button type="button" class="small-btn" id="btn-auto-farm">自動量産: OFF</button>
+          </div>
+        </div>
+        <div class="farm-counts-row" id="subject-counts-text">
+          英: 0 / 数: 0 / 国: 0 / 理: 0 / 社: 0
         </div>
       </div>
 
@@ -428,13 +444,29 @@
   let autoFarmTimer = null;
 
   const poolGoalText = document.getElementById('pool-goal-text');
+  const subjectCountsText = document.getElementById('subject-counts-text');
   const btnGenNow = document.getElementById('btn-gen-now');
   const btnAutoFarm = document.getElementById('btn-auto-farm');
+
+  function updateSubjectCounts() {
+    const counts = { "英語": 0, "数学": 0, "国語": 0, "理科": 0, "社会": 0, "他": 0 };
+    for (const q of allQuestionsPool) {
+      if (SUBJECTS.includes(q.subject)) {
+        counts[q.subject]++;
+      } else {
+        counts["他"]++;
+      }
+    }
+    const extraText = counts["他"] > 0 ? ` / 他: ${counts["他"]}` : "";
+    subjectCountsText.textContent =
+      `英: ${counts["英語"]} / 数: ${counts["数学"]} / 国: ${counts["国語"]} / 理: ${counts["理科"]} / 社: ${counts["社会"]}${extraText}`;
+  }
 
   function updatePoolCounter() {
     const count = allQuestionsPool.length;
     const rem = Math.max(0, TARGET_QUESTIONS - count);
     poolGoalText.textContent = `プール: ${count}問 / 目標 ${TARGET_QUESTIONS}問 (あと${rem}問)`;
+    updateSubjectCounts();
   }
 
   function addQuestionToPool(qObj) {
@@ -490,9 +522,8 @@
       if (snapshot.exists()) {
         const dataObj = snapshot.val();
         const dbQuestions = Object.values(dataObj);
-        let dbAdded = 0;
         dbQuestions.forEach((item) => {
-          if (addQuestionToPool(item)) dbAdded++;
+          addQuestionToPool(item);
         });
         updatePoolCounter();
         document.getElementById('ai-status').textContent = `DB接続完了 (${allQuestionsPool.length}問)`;
@@ -505,7 +536,6 @@
     }
   }
 
-  // 英語・数学・国語・理科・社会の5教科から1問ずつ（計5問）生成してFirebaseに保存
   async function generateAndSaveToFirebase() {
     if (isGenerating) return;
     isGenerating = true;
