@@ -76,6 +76,12 @@
     font-size: 11px;
     letter-spacing: 0.02em;
   }
+  .wrong-counts-row {
+    color: #fca5a5;
+    font-weight: bold;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
   .farm-buttons {
     display: flex;
     gap: 8px;
@@ -345,7 +351,10 @@
           </div>
         </div>
         <div class="farm-counts-row" id="subject-counts-text">
-          英: 0 / 数: 0 / 国: 0 / 理: 0 / 社: 0
+          ストック → 英: 0 / 数: 0 / 国: 0 / 理: 0 / 社: 0
+        </div>
+        <div class="wrong-counts-row" id="wrong-counts-text">
+          間違えた数 (計0問) → 英: 0 / 数: 0 / 国: 0 / 理: 0 / 社: 0
         </div>
       </div>
 
@@ -443,10 +452,40 @@
   let isGenerating = false;
   let autoFarmTimer = null;
 
+  let wrongCounts = { "英語": 0, "数学": 0, "国語": 0, "理科": 0, "社会": 0, "他": 0 };
+  let totalWrongCount = 0;
+
   const poolGoalText = document.getElementById('pool-goal-text');
   const subjectCountsText = document.getElementById('subject-counts-text');
+  const wrongCountsText = document.getElementById('wrong-counts-text');
   const btnGenNow = document.getElementById('btn-gen-now');
   const btnAutoFarm = document.getElementById('btn-auto-farm');
+
+  function updateWrongCountsDisplay() {
+    const extraText = wrongCounts["他"] > 0 ? ` / 他: ${wrongCounts["他"]}` : "";
+    wrongCountsText.textContent =
+      `間違えた数 (計${totalWrongCount}問) → 英: ${wrongCounts["英語"]} / 数: ${wrongCounts["数学"]} / 国: ${wrongCounts["国語"]} / 理: ${wrongCounts["理科"]} / 社: ${wrongCounts["社会"]}${extraText}`;
+  }
+
+  function recordWrongAnswer(subject) {
+    totalWrongCount++;
+    if (SUBJECTS.includes(subject)) {
+      wrongCounts[subject]++;
+    } else {
+      wrongCounts["他"]++;
+    }
+    updateWrongCountsDisplay();
+  }
+
+  function getSubjectBreakdownText() {
+    const counts = { "英語": 0, "数学": 0, "国語": 0, "理科": 0, "社会": 0 };
+    for (const q of allQuestionsPool) {
+      if (SUBJECTS.includes(q.subject)) {
+        counts[q.subject]++;
+      }
+    }
+    return SUBJECTS.map((subj) => `・${subj}: ${counts[subj]}問`).join("\n");
+  }
 
   function updateSubjectCounts() {
     const counts = { "英語": 0, "数学": 0, "国語": 0, "理科": 0, "社会": 0, "他": 0 };
@@ -459,7 +498,7 @@
     }
     const extraText = counts["他"] > 0 ? ` / 他: ${counts["他"]}` : "";
     subjectCountsText.textContent =
-      `英: ${counts["英語"]} / 数: ${counts["数学"]} / 国: ${counts["国語"]} / 理: ${counts["理科"]} / 社: ${counts["社会"]}${extraText}`;
+      `ストック → 英: ${counts["英語"]} / 数: ${counts["数学"]} / 国: ${counts["国語"]} / 理: ${counts["理科"]} / 社: ${counts["社会"]}${extraText}`;
   }
 
   function updatePoolCounter() {
@@ -485,6 +524,13 @@
     return true;
   }
 
+  function getRecentQuestionsSample(limit = 40) {
+    return allQuestionsPool
+      .slice(-limit)
+      .map((item, idx) => `${idx + 1}. [${item.subject}] ${item.q}`)
+      .join("\n");
+  }
+
   function loadEmbeddedJSON() {
     try {
       const jsonElement = document.getElementById('embedded-quiz-json');
@@ -496,6 +542,7 @@
       console.error("内蔵JSONのパースに失敗:", e);
     }
     updatePoolCounter();
+    updateWrongCountsDisplay();
   }
 
   function pickRandomQuestion() {
@@ -543,13 +590,29 @@
 
     try {
       const shuffledSubjects = [...SUBJECTS].sort(() => Math.random() - 0.5);
-      document.getElementById('ai-status').textContent = `AI生成中 (${shuffledSubjects.join("・")})...`;
+      const totalCount = allQuestionsPool.length;
+      const subjectBreakdown = getSubjectBreakdownText();
+      const recentSample = getRecentQuestionsSample(40);
+
+      document.getElementById('ai-status').textContent = `AI生成中 (${totalCount}問参照)...`;
 
       const prompt = `
 中学レベルの4択学習クイズを合計5問作成してください。
 次の5教科をそれぞれ1問ずつ、合計5問作ってください: ${shuffledSubjects.join("、")}。
-同じような問題文にならないよう、毎回異なる単元・テーマから出題してください。
-必ず次のJSON形式のみを出力し、前後に余分な文章やコードブロック記号は付けないでください。
+
+【現在の生成・ストック状況】
+・合計問題数: ${totalCount}問（目標: ${TARGET_QUESTIONS}問）
+・各教科の現在の問題数:
+${subjectBreakdown}
+
+【既存の問題（これらと重複・酷似しない新しい問題を作ってください）】
+${recentSample || "（まだありません）"}
+
+【ルール】
+・現在の各教科の問題数も踏まえ、5教科のバランスと新規性を意識して作成してください。
+・上の「既存の問題」と同じ問題や、単なる数字・単語の差し替えだけの似た問題は作らないでください。
+・これまでに出題されていない別の単元・視点・表現から5問作ってください。
+・必ず次のJSON形式のみを出力し、前後に余分な文章やコードブロック記号は付けないでください。
 
 {
   "questions": [
@@ -795,6 +858,7 @@
       showExplanationAndNext();
     } else {
       clearAllTimers();
+      recordWrongAnswer(currentQuestion.subject);
       quizArea.classList.add('wrong-flash');
       gameOver(`クイズ不正解！（正解は「${currentQuestion.choices[currentQuestion.ans]}」）`);
     }
