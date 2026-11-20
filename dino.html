@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Dino AI Quiz - Firebase無限問題プール版</title>
+<title>Dino AI Quiz - 3000問量産＆Firebaseプール版</title>
 <style>
   body{
     margin:0;
@@ -26,7 +26,7 @@
     text-align:center;
     background:rgba(0,0,0,0.8);
     color:gold;
-    padding:20px;
+    padding:16px 20px;
     border-bottom:3px solid gold;
     width: 100%;
     position: absolute;
@@ -48,7 +48,49 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    margin-top: 80px;
+    margin-top: 76px;
+  }
+
+  /* 量産コントロールバー */
+  .farm-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  .farm-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .small-btn {
+    background: gold;
+    color: black;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: "Yu Gothic", sans-serif;
+  }
+  .small-btn:hover {
+    background: #ffe45c;
+  }
+  .small-btn.active {
+    background: #4ade80;
+    color: #052e16;
+  }
+  .small-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
 
   button{
@@ -121,6 +163,8 @@
     margin-bottom: 8px;
     font-size: 13px;
     color: #cbd5e1;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .subject-badge {
     background: gold;
@@ -281,9 +325,17 @@
     </div>
 
     <div>
+      <div class="farm-bar">
+        <span id="pool-goal-text">プール: 確認中... / 目標 3,000問</span>
+        <div class="farm-buttons">
+          <button type="button" class="small-btn" id="btn-gen-now">+5問 生成</button>
+          <button type="button" class="small-btn" id="btn-auto-farm">自動量産: OFF</button>
+        </div>
+      </div>
+
       <div class="quiz-header">
         <div>
-          <span id="subject-badge" class="subject-badge">中学全範囲</span>
+          <span id="subject-badge" class="subject-badge">5教科ランダム</span>
           <span id="quiz-stats" style="margin-left: 8px;">正解数: 0問</span>
         </div>
         <span id="ai-status">Firebase 接続中...</span>
@@ -366,23 +418,54 @@
   const questionsRef = ref(db, "questions");
 
   const WORKER_URL = "https://nanei-ai.hotaohyeah.workers.dev";
-  let allQuestionsPool = [];
-  let lastQuestionText = "";
+  const TARGET_QUESTIONS = 3000;
+  const SUBJECTS = ["英語", "数学", "国語", "理科", "社会"];
 
-  // 1. 内蔵JSONの読み込み
+  let allQuestionsPool = [];
+  let seenQuestionTexts = new Set();
+  let lastQuestionText = "";
+  let isGenerating = false;
+  let autoFarmTimer = null;
+
+  const poolGoalText = document.getElementById('pool-goal-text');
+  const btnGenNow = document.getElementById('btn-gen-now');
+  const btnAutoFarm = document.getElementById('btn-auto-farm');
+
+  function updatePoolCounter() {
+    const count = allQuestionsPool.length;
+    const rem = Math.max(0, TARGET_QUESTIONS - count);
+    poolGoalText.textContent = `プール: ${count}問 / 目標 ${TARGET_QUESTIONS}問 (あと${rem}問)`;
+  }
+
+  function addQuestionToPool(qObj) {
+    if (!qObj || typeof qObj.q !== "string") return false;
+    const trimmedQ = qObj.q.trim();
+    if (!trimmedQ || seenQuestionTexts.has(trimmedQ)) return false;
+
+    seenQuestionTexts.add(trimmedQ);
+    allQuestionsPool.push({
+      subject: SUBJECTS.includes(qObj.subject) ? qObj.subject : (qObj.subject || "中学5教科"),
+      q: trimmedQ,
+      choices: qObj.choices,
+      ans: qObj.ans,
+      explanation: qObj.explanation || ""
+    });
+    return true;
+  }
+
   function loadEmbeddedJSON() {
     try {
       const jsonElement = document.getElementById('embedded-quiz-json');
       const parsedData = JSON.parse(jsonElement.textContent);
       if (parsedData && Array.isArray(parsedData.questions)) {
-        allQuestionsPool.push(...parsedData.questions);
+        parsedData.questions.forEach(addQuestionToPool);
       }
     } catch (e) {
       console.error("内蔵JSONのパースに失敗:", e);
     }
+    updatePoolCounter();
   }
 
-  // 全問題プールから完全ランダムに1問選ぶ（直前の問題との連続だけ防止）
   function pickRandomQuestion() {
     if (allQuestionsPool.length === 0) return null;
     if (allQuestionsPool.length === 1) return allQuestionsPool[0];
@@ -401,17 +484,20 @@
 
   loadEmbeddedJSON();
 
-  // 2. Firebase Realtime Database からストック済みの問題をすべて取得してプールに合体
   async function loadFromFirebaseDB() {
     try {
       const snapshot = await get(questionsRef);
       if (snapshot.exists()) {
         const dataObj = snapshot.val();
         const dbQuestions = Object.values(dataObj);
-        allQuestionsPool.push(...dbQuestions);
-        document.getElementById('ai-status').textContent = `DB接続完了 (全${allQuestionsPool.length}問ランダム)`;
+        let dbAdded = 0;
+        dbQuestions.forEach((item) => {
+          if (addQuestionToPool(item)) dbAdded++;
+        });
+        updatePoolCounter();
+        document.getElementById('ai-status').textContent = `DB接続完了 (${allQuestionsPool.length}問)`;
       } else {
-        document.getElementById('ai-status').textContent = `DB接続完了 (初期${allQuestionsPool.length}問ランダム)`;
+        document.getElementById('ai-status').textContent = `DB接続完了 (初期${allQuestionsPool.length}問)`;
       }
     } catch (err) {
       console.warn("Firebase読み込みエラー:", err);
@@ -419,19 +505,26 @@
     }
   }
 
-  // 3. AI Worker で新しい問題を生成し、Firebase に自動保存＆即座にランダムプールへ追加
+  // 英語・数学・国語・理科・社会の5教科から1問ずつ（計5問）生成してFirebaseに保存
   async function generateAndSaveToFirebase() {
+    if (isGenerating) return;
+    isGenerating = true;
+    btnGenNow.disabled = true;
+
     try {
-      document.getElementById('ai-status').textContent = 'AIで問題生成中...';
+      const shuffledSubjects = [...SUBJECTS].sort(() => Math.random() - 0.5);
+      document.getElementById('ai-status').textContent = `AI生成中 (${shuffledSubjects.join("・")})...`;
 
       const prompt = `
-中学レベルの学習クイズを3問作成してください。教科（数学・理科・英語・社会・国語）はランダムに選んでください。
+中学レベルの4択学習クイズを合計5問作成してください。
+次の5教科をそれぞれ1問ずつ、合計5問作ってください: ${shuffledSubjects.join("、")}。
+同じような問題文にならないよう、毎回異なる単元・テーマから出題してください。
 必ず次のJSON形式のみを出力し、前後に余分な文章やコードブロック記号は付けないでください。
 
 {
   "questions": [
     {
-      "subject": "数学",
+      "subject": "英語",
       "q": "問題文",
       "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
       "ans": 0,
@@ -439,6 +532,7 @@
     }
   ]
 }
+※ subject は「英語」「数学」「国語」「理科」「社会」のいずれかにしてください。
 ※ ans は正解の選択肢のインデックス（0〜3の整数）にしてください。
 `;
 
@@ -480,26 +574,61 @@
             typeof newQ.ans === "number"
           ) {
             const cleanQ = {
-              subject: newQ.subject || "AI問題",
-              q: newQ.q,
+              subject: SUBJECTS.includes(newQ.subject) ? newQ.subject : (newQ.subject || "中学5教科"),
+              q: newQ.q.trim(),
               choices: newQ.choices,
               ans: newQ.ans,
               explanation: newQ.explanation || ""
             };
-            await push(questionsRef, cleanQ);
-            allQuestionsPool.push(cleanQ);
-            addedCount++;
+            if (!seenQuestionTexts.has(cleanQ.q)) {
+              await push(questionsRef, cleanQ);
+              addQuestionToPool(cleanQ);
+              addedCount++;
+            }
           }
         }
+        updatePoolCounter();
         document.getElementById('ai-status').textContent =
-          `AI追加+${addedCount}問 (計${allQuestionsPool.length}問ランダム)`;
+          `AI追加+${addedCount}問 (計${allQuestionsPool.length}問)`;
       }
     } catch (err) {
       console.warn("AI生成・保存エラー:", err);
       document.getElementById('ai-status').textContent =
-        `DB/ローカル稼働中 (${allQuestionsPool.length}問ランダム)`;
+        `待機中 (${allQuestionsPool.length}問)`;
+    } finally {
+      isGenerating = false;
+      btnGenNow.disabled = false;
     }
   }
+
+  btnGenNow.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    generateAndSaveToFirebase();
+  });
+
+  btnAutoFarm.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    if (autoFarmTimer) {
+      clearInterval(autoFarmTimer);
+      autoFarmTimer = null;
+      btnAutoFarm.textContent = "自動量産: OFF";
+      btnAutoFarm.classList.remove("active");
+    } else {
+      btnAutoFarm.textContent = "自動量産: ON (10秒毎)";
+      btnAutoFarm.classList.add("active");
+      generateAndSaveToFirebase();
+      autoFarmTimer = setInterval(() => {
+        if (allQuestionsPool.length >= TARGET_QUESTIONS) {
+          clearInterval(autoFarmTimer);
+          autoFarmTimer = null;
+          btnAutoFarm.textContent = "目標達成! OFF";
+          btnAutoFarm.classList.remove("active");
+          return;
+        }
+        generateAndSaveToFirebase();
+      }, 10000);
+    }
+  });
 
   loadFromFirebaseDB().then(() => {
     generateAndSaveToFirebase();
