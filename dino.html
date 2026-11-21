@@ -545,9 +545,28 @@
     updateWrongCountsDisplay();
   }
 
+  // 選択肢をランダムにシャッフルし、正解インデックスも追従させる
+  function shuffleQuestionChoices(qObj) {
+    if (!qObj || !Array.isArray(qObj.choices)) return qObj;
+    const paired = qObj.choices.map((text, idx) => ({
+      text,
+      isCorrect: idx === qObj.ans
+    }));
+    for (let i = paired.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [paired[i], paired[j]] = [paired[j], paired[i]];
+    }
+    const newAns = paired.findIndex((item) => item.isCorrect);
+    return {
+      ...qObj,
+      choices: paired.map((item) => item.text),
+      ans: newAns >= 0 ? newAns : 0
+    };
+  }
+
   function pickRandomQuestion() {
     if (allQuestionsPool.length === 0) return null;
-    if (allQuestionsPool.length === 1) return allQuestionsPool[0];
+    if (allQuestionsPool.length === 1) return shuffleQuestionChoices(allQuestionsPool[0]);
 
     let candidate;
     let attempts = 0;
@@ -558,7 +577,7 @@
     } while (candidate.q === lastQuestionText && attempts < 10);
 
     lastQuestionText = candidate.q;
-    return candidate;
+    return shuffleQuestionChoices(candidate);
   }
 
   loadEmbeddedJSON();
@@ -612,6 +631,7 @@ ${recentSample || "（まだありません）"}
 ・現在の各教科の問題数も踏まえ、5教科のバランスと新規性を意識して作成してください。
 ・上の「既存の問題」と同じ問題や、単なる数字・単語の差し替えだけの似た問題は作らないでください。
 ・これまでに出題されていない別の単元・視点・表現から5問作ってください。
+・正解の位置（ans）は 0〜3 で偏らないようランダムに配置してください。
 ・必ず次のJSON形式のみを出力し、前後に余分な文章やコードブロック記号は付けないでください。
 
 {
