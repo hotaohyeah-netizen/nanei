@@ -82,6 +82,12 @@
     font-size: 11px;
     letter-spacing: 0.02em;
   }
+  .highscore-row {
+    color: #86efac;
+    font-weight: bold;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
   .farm-buttons {
     display: flex;
     gap: 8px;
@@ -350,6 +356,9 @@
             <button type="button" class="small-btn" id="btn-auto-farm">自動量産: OFF</button>
           </div>
         </div>
+        <div class="highscore-row" id="dino-highscore-text">
+          最高スコア (Firebase): 0 (最大正解: 0問)
+        </div>
         <div class="farm-counts-row" id="subject-counts-text">
           ストック → 英: 0 / 数: 0 / 国: 0 / 理: 0 / 社: 0
         </div>
@@ -425,7 +434,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, get, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyA7C2Vz4IHK0OvF-tpDfxtkKxURHrQIJ4g",
@@ -441,6 +450,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const questionsRef = ref(db, "questions");
+  const dinoScoreRef = ref(db, "dinoScores");
 
   const WORKER_URL = "https://nanei-ai.hotaohyeah.workers.dev";
   const TARGET_QUESTIONS = 3000;
@@ -455,11 +465,77 @@
   let wrongCounts = { "英語": 0, "数学": 0, "国語": 0, "理科": 0, "社会": 0, "他": 0 };
   let totalWrongCount = 0;
 
+  let highScore = Number(localStorage.getItem("dinoHighScore") || 0);
+  let bestCorrect = Number(localStorage.getItem("dinoBestCorrect") || 0);
+
   const poolGoalText = document.getElementById('pool-goal-text');
+  const dinoHighscoreText = document.getElementById('dino-highscore-text');
   const subjectCountsText = document.getElementById('subject-counts-text');
   const wrongCountsText = document.getElementById('wrong-counts-text');
   const btnGenNow = document.getElementById('btn-gen-now');
   const btnAutoFarm = document.getElementById('btn-auto-farm');
+
+  function updateHighScoreDisplay() {
+    dinoHighscoreText.textContent = `最高スコア (Firebase): ${highScore} (最大正解: ${bestCorrect}問)`;
+  }
+
+  async function loadDinoHighScoreFromFirebase() {
+    try {
+      const snap = await get(dinoScoreRef);
+      if (snap.exists()) {
+        const data = snap.val() || {};
+        const cloudHigh = Number(data.highScore || 0);
+        const cloudCorrect = Number(data.bestCorrect || 0);
+        if (cloudHigh > highScore) {
+          highScore = cloudHigh;
+          localStorage.setItem("dinoHighScore", highScore);
+        }
+        if (cloudCorrect > bestCorrect) {
+          bestCorrect = cloudCorrect;
+          localStorage.setItem("dinoBestCorrect", bestCorrect);
+        }
+      } else {
+        await set(dinoScoreRef, {
+          highScore: highScore,
+          bestCorrect: bestCorrect,
+          updatedAt: Date.now()
+        });
+      }
+    } catch (e) {
+      console.warn("Firebase ハイスコア読み込みエラー:", e);
+    }
+    updateHighScoreDisplay();
+  }
+
+  async function saveDinoHighScoreIfNeeded(finalScore, finalCorrect) {
+    const flooredScore = Math.floor(finalScore);
+    let updated = false;
+    if (flooredScore > highScore) {
+      highScore = flooredScore;
+      localStorage.setItem("dinoHighScore", highScore);
+      updated = true;
+    }
+    if (finalCorrect > bestCorrect) {
+      bestCorrect = finalCorrect;
+      localStorage.setItem("dinoBestCorrect", bestCorrect);
+      updated = true;
+    }
+    updateHighScoreDisplay();
+    if (updated) {
+      try {
+        await set(dinoScoreRef, {
+          highScore: highScore,
+          bestCorrect: bestCorrect,
+          updatedAt: Date.now()
+        });
+      } catch (e) {
+        console.warn("Firebase ハイスコア保存エラー:", e);
+      }
+    }
+  }
+
+  updateHighScoreDisplay();
+  loadDinoHighScoreFromFirebase();
 
   function updateWrongCountsDisplay() {
     const extraText = wrongCounts["他"] > 0 ? ` / 他: ${wrongCounts["他"]}` : "";
@@ -545,7 +621,6 @@
     updateWrongCountsDisplay();
   }
 
-  // 選択肢をランダムにシャッフルし、正解インデックスも追従させる
   function shuffleQuestionChoices(qObj) {
     if (!qObj || !Array.isArray(qObj.choices)) return qObj;
     const paired = qObj.choices.map((text, idx) => ({
@@ -1003,7 +1078,7 @@ ${recentSample || "（まだありません）"}
     ctx.fillStyle = 'gold';
     ctx.font = 'bold 14px "Yu Gothic", sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`SCORE: ${Math.floor(score)} (SPEED: ${gameSpeed.toFixed(1)})`, canvas.width - 15, 25);
+    ctx.fillText(`SCORE: ${Math.floor(score)} (HI: ${Math.max(highScore, Math.floor(score))})`, canvas.width - 15, 25);
 
     requestAnimationFrame(update);
   }
@@ -1013,8 +1088,9 @@ ${recentSample || "（まだありません）"}
     isGameOver = true;
     clearAllTimers();
     timerBar.style.width = '0%';
+    saveDinoHighScoreIfNeeded(score, correctCount);
     overlayTitle.textContent = 'GAME OVER';
-    overlaySub.innerHTML = `${reason}<br>スコア: ${Math.floor(score)} | 正解数: ${correctCount}問<br><br><b>[ タップまたはSpaceキーでリトライ ]</b>`;
+    overlaySub.innerHTML = `${reason}<br>スコア: ${Math.floor(score)} (最高: ${highScore}) | 正解数: ${correctCount}問<br><br><b>[ タップまたはSpaceキーでリトライ ]</b>`;
     overlayMsg.classList.remove('hidden');
   }
 

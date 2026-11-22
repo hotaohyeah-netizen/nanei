@@ -39,6 +39,12 @@
     margin-top:15px;
     font-weight:bold;
 }
+
+.cloud-status{
+    font-size:12px;
+    color:#fde68a;
+    margin-top:6px;
+}
 </style>
 
 </head>
@@ -150,6 +156,10 @@ HP：<span id="myHP">5</span>
 <span id="hardcoreBest">0</span>
 </p>
 
+<div class="cloud-status" id="jankenCloudStatus">
+Firebase 最高スコア同期中...
+</div>
+
 <div id="hardcoreArea" style="display:none;">
 
 <h2>ハードコアモード</h2>
@@ -174,7 +184,24 @@ HP：<span id="myHP">5</span>
 
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA7C2Vz4IHK0OvF-tpDfxtkKxURHrQIJ4g",
+  authDomain: "q-pool.firebaseapp.com",
+  databaseURL: "https://q-pool-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "q-pool",
+  storageBucket: "q-pool.firebasestorage.app",
+  messagingSenderId: "737918955662",
+  appId: "1:737918955662:web:556fdeb24b6751509199df",
+  measurementId: "G-T807HHVX9H"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const jankenScoreRef = ref(db, "jankenScores");
 
 let myHP = 5;
 let enemyHP = 5;
@@ -189,390 +216,313 @@ let streak = 0;
 let lastPlayerHand = null;
 let enemyGyuinUsed = false;
 
-let bestStreak =
-localStorage.getItem("bestStreak") || 0;
-
-document.getElementById("bestStreak").textContent =
-bestStreak;
+let bestStreak = Number(localStorage.getItem("bestStreak") || 0);
+document.getElementById("bestStreak").textContent = bestStreak;
 
 let hardcoreMode = false;
-
 let hardcoreStreak = 0;
+let hardcoreBest = Number(localStorage.getItem("hardcoreBest") || 0);
+document.getElementById("hardcoreBest").textContent = hardcoreBest;
 
-let hardcoreBest =
-localStorage.getItem("hardcoreBest") || 0;
-
-document.getElementById("hardcoreBest").textContent =
-hardcoreBest;
-
-if(
-localStorage.getItem("hardcoreUnlocked")
-==="true"
-){
-document.getElementById("hardcoreArea").style.display =
-"block";
+if (localStorage.getItem("hardcoreUnlocked") === "true") {
+    document.getElementById("hardcoreArea").style.display = "block";
 }
 
+function syncBestDisplays() {
+    document.getElementById("bestStreak").textContent = bestStreak;
+    document.getElementById("hardcoreBest").textContent = hardcoreBest;
+}
+
+async function loadJankenScoresFromFirebase() {
+    const statusEl = document.getElementById("jankenCloudStatus");
+    try {
+        const snap = await get(jankenScoreRef);
+        if (snap.exists()) {
+            const data = snap.val() || {};
+            const cloudBest = Number(data.bestStreak || 0);
+            const cloudHardcore = Number(data.hardcoreBest || 0);
+
+            if (cloudBest > bestStreak) {
+                bestStreak = cloudBest;
+                localStorage.setItem("bestStreak", bestStreak);
+            }
+            if (cloudHardcore > hardcoreBest) {
+                hardcoreBest = cloudHardcore;
+                localStorage.setItem("hardcoreBest", hardcoreBest);
+            }
+            syncBestDisplays();
+            statusEl.textContent = `Firebase 最高記録同期済み (連勝:${bestStreak} / HC:${hardcoreBest})`;
+        } else {
+            await saveJankenScoresToFirebase();
+            statusEl.textContent = `Firebase 最高記録を初期化しました`;
+        }
+    } catch (e) {
+        console.warn("Firebase 読み込みエラー:", e);
+        statusEl.textContent = `ローカル保存モード (連勝:${bestStreak} / HC:${hardcoreBest})`;
+    }
+}
+
+async function saveJankenScoresToFirebase() {
+    const statusEl = document.getElementById("jankenCloudStatus");
+    try {
+        await set(jankenScoreRef, {
+            bestStreak: bestStreak,
+            hardcoreBest: hardcoreBest,
+            updatedAt: Date.now()
+        });
+        statusEl.textContent = `Firebase に最高記録を保存しました (連勝:${bestStreak} / HC:${hardcoreBest})`;
+    } catch (e) {
+        console.warn("Firebase 保存エラー:", e);
+        statusEl.textContent = `Firebase 保存失敗（ローカルには保存済み）`;
+    }
+}
+
+loadJankenScoresFromFirebase();
+
 const handImage = {
-    gu:"images/gu.jpeg",
-    choki:"images/choki.jpeg",
-    pa:"images/pa.jpeg",
-    gyuin:"images/gyuin.jpeg",
-    bubu:"images/bubu.jpeg"
+    gu: "images/gu.jpeg",
+    choki: "images/choki.jpeg",
+    pa: "images/pa.jpeg",
+    gyuin: "images/gyuin.jpeg",
+    bubu: "images/bubu.jpeg"
 };
 
-const gyuinSound =
-new Audio("sounds/gyuin.mp3");
+const gyuinSound = new Audio("sounds/gyuin.mp3");
+const bubuSound = new Audio("music/bgm1.mp3");
+const winSound = new Audio("sounds/win.mp3");
+const loseSound = new Audio("sounds/lose.mp3");
 
-const bubuSound =
-new Audio("music/bgm1.mp3");
+function updateEnemyHPDisplay() {
+    document.getElementById("enemyHP").textContent = hardcoreMode ? "∞" : enemyHP;
+}
 
-const winSound =
-new Audio("sounds/win.mp3");
+function updateHardcoreStreakDisplay() {
+    document.getElementById("hardcoreStreak").textContent = `現在連勝：${hardcoreStreak}`;
+    if (hardcoreStreak > hardcoreBest) {
+        hardcoreBest = hardcoreStreak;
+        localStorage.setItem("hardcoreBest", hardcoreBest);
+        syncBestDisplays();
+        saveJankenScoresToFirebase();
+    }
+}
 
-const loseSound =
-new Audio("sounds/lose.mp3");
+function getEnemyHand() {
+    const level = document.getElementById("difficulty").value;
+    const hands = ["gu", "choki", "pa", "bubu"];
 
-function getEnemyHand(){
-
-    const level =
-    document.getElementById("difficulty").value;
-
-    const hands =
-    ["gu","choki","pa","bubu"];
-
-    // 弱
-    if(level==="easy"){
-
-        return hands[
-            Math.floor(Math.random()*hands.length)
-        ];
+    if (level === "easy") {
+        return hands[Math.floor(Math.random() * hands.length)];
     }
 
-    // 中
-    if(level==="normal"){
-
-        if(
-            enemyHP <= 1 &&
-            !enemyGyuinUsed &&
-            Math.random() < 0.2
-        ){
+    if (level === "normal") {
+        if (!hardcoreMode && enemyHP <= 1 && !enemyGyuinUsed && Math.random() < 0.2) {
             enemyGyuinUsed = true;
             return "gyuin";
         }
-
-        if(
-            lastPlayerHand &&
-            Math.random() < 0.5
-        ){
+        if (lastPlayerHand && Math.random() < 0.5) {
             return lastPlayerHand;
         }
-
-        return hands[
-            Math.floor(Math.random()*hands.length)
-        ];
+        return hands[Math.floor(Math.random() * hands.length)];
     }
 
-    // 強
-    if(level==="hard"){
-
-        if(
-            enemyHP <= 2 &&
-            !enemyGyuinUsed &&
-            Math.random() < 0.5
-        ){
+    if (level === "hard") {
+        if (!hardcoreMode && enemyHP <= 2 && !enemyGyuinUsed && Math.random() < 0.5) {
             enemyGyuinUsed = true;
             return "gyuin";
         }
-
-        if(bubuDraws >= 2){
-
-            const safeHands =
-            ["gu","choki","pa"];
-
-            return safeHands[
-                Math.floor(
-                    Math.random()*safeHands.length
-                )
-            ];
+        if (bubuDraws >= 2) {
+            const safeHands = ["gu", "choki", "pa"];
+            return safeHands[Math.floor(Math.random() * safeHands.length)];
         }
-
-        if(
-            lastPlayerHand &&
-            Math.random() < 0.6
-        ){
-
+        if (lastPlayerHand && Math.random() < 0.6) {
             const counter = {
-
-                gu:"pa",
-                choki:"gu",
-                pa:"choki",
-                bubu:"pa"
-
+                gu: "pa",
+                choki: "gu",
+                pa: "choki",
+                bubu: "pa"
             };
-
             return counter[lastPlayerHand];
         }
-
-        return hands[
-            Math.floor(Math.random()*hands.length)
-        ];
+        return hands[Math.floor(Math.random() * hands.length)];
     }
 
     return "gu";
 }
 
-function play(player){
-
-    if(player==="gyuin"){
-
-        if(gyuinUsed){
+function play(player) {
+    if (player === "gyuin") {
+        if (gyuinUsed) {
             alert("ギュイーンは1回だけ！");
             return;
         }
-
         gyuinUsed = true;
-
-        document.getElementById("gyuinBtn").disabled=true;
-
-        gyuinSound.currentTime=0;
+        document.getElementById("gyuinBtn").disabled = true;
+        gyuinSound.currentTime = 0;
         gyuinSound.play();
     }
 
-    if(player==="bubu"){
-
-        bubuSound.currentTime=0;
+    if (player === "bubu") {
+        bubuSound.currentTime = 0;
         bubuSound.play();
     }
 
     const enemy = getEnemyHand();
 
-    document.getElementById("playerHand").src =
-    handImage[player];
+    document.getElementById("playerHand").src = handImage[player];
+    document.getElementById("enemyHand").src = handImage[enemy];
 
-    document.getElementById("enemyHand").src =
-    handImage[enemy];
+    let result = judge(player, enemy);
+    lastPlayerHand = player;
 
-    let result =
-judge(player,enemy);
+    if (enemy === "bubu" && player !== "pa") {
+        enemyBubuDraws++;
+        document.getElementById("enemyBubuCount").textContent = enemyBubuDraws;
 
-lastPlayerHand = player;
-if(enemy==="bubu" && player!=="pa"){
-
-    enemyBubuDraws++;
-
-    document.getElementById(
-        "enemyBubuCount"
-    ).textContent =
-    enemyBubuDraws;
-
-    if(!hardcoreMode){
-
-        if(enemyBubuDraws>=3){
-
-            myHP = 0;
+        if (enemyBubuDraws >= 3) {
+            if (!hardcoreMode) {
+                myHP = 0;
+            } else {
+                myHP--;
+                enemyBubuDraws = 0;
+                document.getElementById("enemyBubuCount").textContent = 0;
+            }
         }
-
-    }else{
-
-        if(enemyBubuDraws>=3){
-
-            myHP--;
-
-            enemyBubuDraws = 0;
-
-            document.getElementById(
-                "enemyBubuCount"
-            ).textContent = 0;
-        }
+    } else {
+        enemyBubuDraws = 0;
+        document.getElementById("enemyBubuCount").textContent = 0;
     }
 
-}else{
-
-    enemyBubuDraws = 0;
-
-    document.getElementById(
-        "enemyBubuCount"
-    ).textContent = 0;
-}
-    if(result==="win"){
-
-        enemyHP--;
-
-        document.getElementById("message").textContent =
-        "やるじゃないか！";
-
-    }
-
-    else if(result==="lose"){
-
+    if (result === "win") {
+        if (hardcoreMode) {
+            hardcoreStreak++;
+            updateHardcoreStreakDisplay();
+            document.getElementById("message").textContent = `撃破！ハードコア連勝：${hardcoreStreak}`;
+        } else {
+            enemyHP--;
+            document.getElementById("message").textContent = "やるじゃないか！";
+        }
+    } else if (result === "lose") {
         myHP--;
-
-        document.getElementById("message").textContent =
-        "まだまだだな！";
-
+        document.getElementById("message").textContent = "まだまだだな！";
+    } else {
+        document.getElementById("message").textContent = "あいこ！";
     }
 
-    else{
+    document.getElementById("myHP").textContent = myHP;
+    updateEnemyHPDisplay();
 
-        document.getElementById("message").textContent =
-        "あいこ！";
-    }
+    if (!hardcoreMode && enemyHP <= 0) {
+        const level = document.getElementById("difficulty").value;
 
-    document.getElementById("myHP").textContent =
-    myHP;
-
-    document.getElementById("enemyHP").textContent =
-    enemyHP;
-
-    if(enemyHP<=0){
-
-        const level =
-document.getElementById("difficulty").value;
-
-if(level==="hard" && !hardcoreMode){
-
-    localStorage.setItem(
-        "hardcoreUnlocked",
-        "true"
-    );
-
-    document.getElementById(
-        "hardcoreArea"
-    ).style.display = "block";
-
-    alert(
-        "ハードコアモード解放！"
-    );
-}
+        if (level === "hard") {
+            localStorage.setItem("hardcoreUnlocked", "true");
+            document.getElementById("hardcoreArea").style.display = "block";
+            alert("ハードコアモード解放！");
+        }
 
         winSound.play();
-
         streak++;
 
-        if(streak > bestStreak){
-
+        if (streak > bestStreak) {
             bestStreak = streak;
-
-            localStorage.setItem(
-            "bestStreak",
-            bestStreak
-            );
-
-            document.getElementById("bestStreak").textContent =
-            bestStreak;
+            localStorage.setItem("bestStreak", bestStreak);
+            syncBestDisplays();
+            saveJankenScoresToFirebase();
         }
 
-        setTimeout(()=>{
+        setTimeout(() => {
             alert("勝利！");
             location.reload();
-        },300);
-
+        }, 300);
+        return;
     }
 
-    if(myHP<=0){
-
+    if (myHP <= 0) {
         loseSound.play();
-
         streak = 0;
 
-        setTimeout(()=>{
-            alert("敗北...");
-            location.reload();
-        },300);
+        const msg = hardcoreMode
+            ? `ハードコア終了！到達連勝：${hardcoreStreak}`
+            : "敗北...";
 
+        setTimeout(() => {
+            alert(msg);
+            location.reload();
+        }, 300);
     }
 }
 
-function judge(me,ai){
-
-    // ブーブー
-    if(me==="bubu"){
-
-        if(ai==="pa"){
+function judge(me, ai) {
+    if (me === "bubu") {
+        if (ai === "pa") {
             return "lose";
         }
 
         bubuDraws++;
+        document.getElementById("bubuCount").textContent = bubuDraws;
 
-        document.getElementById("bubuCount").textContent =
-        bubuDraws;
-
-        if(!hardcoreMode){
-
-            if(bubuDraws>=3){
-
+        if (bubuDraws >= 3) {
+            if (!hardcoreMode) {
                 enemyHP = 0;
-            }
-
-        }else{
-
-            if(bubuDraws>=3){
-
-                enemyHP--;
-
+            } else {
+                hardcoreStreak++;
+                updateHardcoreStreakDisplay();
                 bubuDraws = 0;
-
-                document.getElementById("bubuCount").textContent =
-                bubuDraws;
+                document.getElementById("bubuCount").textContent = 0;
             }
         }
 
         return "draw";
     }
 
-    // ギュイーン
-    if(me==="gyuin"){
-
-        if(ai==="bubu" || ai==="gyuin"){
+    if (me === "gyuin") {
+        if (ai === "bubu" || ai === "gyuin") {
             return "draw";
         }
-
         return "win";
     }
 
-    // 通常じゃんけん
-    if(me===ai){
+    if (me === ai) {
         return "draw";
     }
 
-    if(
-      (me==="gu"&&ai==="choki")||
-      (me==="choki"&&ai==="pa")||
-      (me==="pa"&&ai==="gu")
-    ){
+    if (
+        (me === "gu" && ai === "choki") ||
+        (me === "choki" && ai === "pa") ||
+        (me === "pa" && ai === "gu")
+    ) {
         return "win";
     }
 
     return "lose";
 }
 
-function startHardcore(){
-
+function startHardcore() {
     hardcoreMode = true;
-
     hardcoreStreak = 0;
+    myHP = 1;
+    enemyHP = Infinity;
 
-    myHP = 1
+    gyuinUsed = false;
+    bubuDraws = 0;
+    enemyBubuDraws = 0;
+    lastPlayerHand = null;
+    enemyGyuinUsed = false;
 
-    enemyHP = 1;
+    document.getElementById("gyuinBtn").disabled = false;
+    document.getElementById("bubuCount").textContent = 0;
+    document.getElementById("enemyBubuCount").textContent = 0;
+    document.getElementById("myHP").textContent = myHP;
+    updateEnemyHPDisplay();
+    updateHardcoreStreakDisplay();
 
-    document.getElementById("myHP").textContent =
-    myHP;
-
-    document.getElementById("enemyHP").textContent =
-    "∞";
-
-    document.getElementById("difficulty").value =
-    "hard";
-
-    document.getElementById("difficulty").disabled =
-    true;
-
-    document.getElementById("message").textContent =
-    "🔥ハードコアモード開始！";
+    document.getElementById("difficulty").value = "hard";
+    document.getElementById("difficulty").disabled = true;
+    document.getElementById("message").textContent = "ハードコアモード開始！";
 }
 
+window.play = play;
+window.startHardcore = startHardcore;
 </script>
 
 </body>
