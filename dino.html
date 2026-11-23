@@ -897,17 +897,17 @@ ${recentSample || "（まだありません）"}
   let frameCount = 0;
   let currentQuestion = null;
 
-  // 枠内（高さ225px）に収まるジャンプ上限と、控えめな小ジャンプ設定
+  // 小ジャンプは前の感じ（-4.5）を維持しつつ、大ジャンプの上限だけを控えめに調整
   const dino = {
     x: 50,
-    y: 168,
+    y: 162,
     width: 32,
     height: 36,
     dy: 0,
-    jumpPower: -10.2,
+    jumpPower: -8.6,
     gravity: 0.65,
     grounded: true,
-    groundY: 168,
+    groundY: 162,
     isJumpHeld: false
   };
 
@@ -1110,9 +1110,9 @@ ${recentSample || "（まだありません）"}
 
   function releaseJump() {
     dino.isJumpHeld = false;
-    // 指やキーを離したら上昇をほぼ止めて、目立ちにくい小ジャンプにする
-    if (dino.dy < -1.0) {
-      dino.dy = -1.0;
+    // 小ジャンプは前の感じ（-4.5）を維持
+    if (dino.dy < -4.5) {
+      dino.dy = -4.5;
     }
   }
 
@@ -1196,7 +1196,7 @@ ${recentSample || "（まだありません）"}
     dino.y += dino.dy;
     if (dino.y < dino.groundY) {
       const currentGravity = (dino.isJumpHeld && dino.dy < 0)
-        ? dino.gravity * 0.85
+        ? dino.gravity * 0.95
         : dino.gravity;
       dino.dy += currentGravity;
       dino.grounded = false;
@@ -1206,7 +1206,6 @@ ${recentSample || "（まだありません）"}
       dino.grounded = true;
     }
 
-    // 枠上端（y >= 12）からはみ出さないようにクランプ
     if (dino.y < 12) {
       dino.y = 12;
       if (dino.dy < 0) dino.dy = 0;
