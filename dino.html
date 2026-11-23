@@ -288,11 +288,11 @@
   #canvas-container {
     position: relative;
     width: 100%;
-    height: 200px;
+    height: 215px;
     background: rgba(0, 0, 0, 0.6);
     cursor: pointer;
-    border-bottom-left-radius: 13px;
-    border-bottom-right-radius: 13px;
+    user-select: none;
+    -webkit-user-select: none;
   }
   canvas {
     display: block;
@@ -321,6 +321,37 @@
     font-size: 14px;
     line-height: 1.6;
   }
+
+  /* ジャンプ＆サボテン調整バー */
+  .tuning-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 215, 0, 0.25);
+    padding: 8px 14px;
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
+    font-size: 12px;
+    color: #e2e8f0;
+  }
+  .tuning-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tuning-item input[type="range"] {
+    accent-color: gold;
+    width: 100px;
+    cursor: pointer;
+  }
+  .tuning-hint {
+    font-size: 11px;
+    color: #fde68a;
+  }
+
   .hidden { display: none !important; }
 
   footer{
@@ -397,16 +428,31 @@
 
   <!-- ゲームエリア -->
   <div id="canvas-container">
-    <canvas id="gameCanvas" width="720" height="200"></canvas>
+    <canvas id="gameCanvas" width="720" height="215"></canvas>
     <div id="overlay-msg">
       <h2 id="overlay-title">DINO AI QUIZ</h2>
       <p id="overlay-sub">
         走りながら上の4択に答えよう！（1問制限時間: 10秒）<br>
-        正解後は5秒間の解説タイム（その間もジャンプで避け続けよう！）<br>
-        時間切れ・不正解・障害物衝突で即ゲームオーバー。<br><br>
+        <b>長押しで大ジャンプ / チョン押しで小ジャンプ</b>（↓キーで急降下）<br>
+        時間切れ・不正解・サボテン衝突で即ゲームオーバー。<br><br>
         <b>[ 画面タップ または Spaceキー でスタート ]</b>
       </p>
     </div>
+  </div>
+
+  <!-- ジャンプ＆サボテン微調整バー -->
+  <div class="tuning-bar">
+    <div class="tuning-item">
+      <label for="jump-power-slider">ジャンプ力:</label>
+      <input type="range" id="jump-power-slider" min="11" max="17" step="0.5" value="13.5">
+      <span id="jump-power-val">13.5</span>
+    </div>
+    <div class="tuning-item">
+      <label for="cactus-scale-slider">サボテン高さ:</label>
+      <input type="range" id="cactus-scale-slider" min="0.8" max="1.5" step="0.1" value="1.1">
+      <span id="cactus-scale-val">1.1x</span>
+    </div>
+    <span class="tuning-hint">※押し長さでも高さを調節できます</span>
   </div>
 </div>
 
@@ -823,7 +869,7 @@ ${recentSample || "（まだありません）"}
   });
 
   // ==========================================
-  // ゲームロジック本体
+  // ゲームロジック本体（高いサボテン＆可変ジャンプ対応）
   // ==========================================
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -843,6 +889,11 @@ ${recentSample || "（まだありません）"}
   const expTimerDisplay = document.getElementById('exp-timer');
   const timerBar = document.getElementById('timer-bar');
 
+  const jumpPowerSlider = document.getElementById('jump-power-slider');
+  const jumpPowerVal = document.getElementById('jump-power-val');
+  const cactusScaleSlider = document.getElementById('cactus-scale-slider');
+  const cactusScaleVal = document.getElementById('cactus-scale-val');
+
   let isPlaying = false;
   let isGameOver = false;
   let isShowingExplanation = false;
@@ -858,6 +909,32 @@ ${recentSample || "（まだありません）"}
   let maxGameSpeed = 16;
   let frameCount = 0;
   let currentQuestion = null;
+
+  let cactusHeightScale = Number(cactusScaleSlider.value);
+
+  const dino = {
+    x: 50,
+    y: 152,
+    width: 32,
+    height: 36,
+    dy: 0,
+    jumpPower: -Number(jumpPowerSlider.value),
+    gravity: 0.62,
+    grounded: true,
+    groundY: 152,
+    isJumpHeld: false
+  };
+
+  jumpPowerSlider.addEventListener('input', () => {
+    const val = Number(jumpPowerSlider.value);
+    dino.jumpPower = -val;
+    jumpPowerVal.textContent = val.toFixed(1);
+  });
+
+  cactusScaleSlider.addEventListener('input', () => {
+    cactusHeightScale = Number(cactusScaleSlider.value);
+    cactusScaleVal.textContent = `${cactusHeightScale.toFixed(1)}x`;
+  });
 
   function clearAllTimers() {
     if (expCountdownTimer) {
@@ -959,18 +1036,6 @@ ${recentSample || "（まだありません）"}
     }
   }
 
-  const dino = {
-    x: 50,
-    y: 135,
-    width: 32,
-    height: 36,
-    dy: 0,
-    jumpPower: -11,
-    gravity: 0.6,
-    grounded: true,
-    groundY: 135
-  };
-
   let obstacles = [];
 
   function startGame() {
@@ -985,6 +1050,7 @@ ${recentSample || "（まだありません）"}
     dino.y = dino.groundY;
     dino.dy = 0;
     dino.grounded = true;
+    dino.isJumpHeld = false;
 
     quizStats.textContent = `正解数: 0問`;
     overlayMsg.classList.add('hidden');
@@ -992,25 +1058,72 @@ ${recentSample || "（まだありません）"}
     requestAnimationFrame(update);
   }
 
-  function jump() {
+  function startJump() {
     if (!isPlaying || isGameOver) {
       startGame();
       return;
     }
+    dino.isJumpHeld = true;
     if (dino.grounded) {
       dino.dy = dino.jumpPower;
       dino.grounded = false;
     }
   }
 
+  function releaseJump() {
+    dino.isJumpHeld = false;
+    // 上昇中にボタンを離したら速度を抑えて小ジャンプにする
+    if (dino.dy < -4.5) {
+      dino.dy = -4.5;
+    }
+  }
+
+  function fastFall() {
+    if (isPlaying && !isGameOver && !dino.grounded && dino.dy < 9) {
+      dino.dy = 9;
+    }
+  }
+
   function spawnObstacle() {
-    const height = Math.random() > 0.5 ? 34 : 24;
+    // 高さを大きくしたサボテンバリエーション（中・大・巨大）
+    const baseVariants = [
+      { baseH: 40, width: 20 },
+      { baseH: 50, width: 22 },
+      { baseH: 58, width: 26 }
+    ];
+    const picked = baseVariants[Math.floor(Math.random() * baseVariants.length)];
+    const height = Math.round(picked.baseH * cactusHeightScale);
+    const groundBottom = dino.groundY + dino.height;
+
     obstacles.push({
       x: canvas.width,
-      y: dino.groundY + (dino.height - height),
-      width: 18,
+      y: groundBottom - height,
+      width: picked.width,
       height: height
     });
+  }
+
+  function drawCactus(obs) {
+    const trunkW = Math.max(8, Math.floor(obs.width * 0.45));
+    const trunkX = obs.x + Math.floor((obs.width - trunkW) / 2);
+
+    ctx.fillStyle = '#22c55e';
+    // 中央の幹
+    ctx.fillRect(trunkX, obs.y, trunkW, obs.height);
+
+    // 左の腕
+    const armW = Math.max(4, Math.floor(obs.width * 0.25));
+    const leftArmY = obs.y + Math.floor(obs.height * 0.32);
+    const leftArmH = Math.floor(obs.height * 0.26);
+    ctx.fillRect(obs.x, leftArmY, armW, leftArmH);
+    ctx.fillRect(obs.x, leftArmY + leftArmH - 4, trunkX - obs.x + 2, 4);
+
+    // 右の腕
+    const rightArmX = obs.x + obs.width - armW;
+    const rightArmY = obs.y + Math.floor(obs.height * 0.22);
+    const rightArmH = Math.floor(obs.height * 0.28);
+    ctx.fillRect(rightArmX, rightArmY, armW, rightArmH);
+    ctx.fillRect(trunkX + trunkW - 2, rightArmY + rightArmH - 4, rightArmX - (trunkX + trunkW) + armW, 4);
   }
 
   function update() {
@@ -1018,16 +1131,21 @@ ${recentSample || "（まだありません）"}
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const groundBottom = dino.groundY + dino.height;
     ctx.beginPath();
-    ctx.moveTo(0, dino.groundY + dino.height);
-    ctx.lineTo(canvas.width, dino.groundY + dino.height);
+    ctx.moveTo(0, groundBottom);
+    ctx.lineTo(canvas.width, groundBottom);
     ctx.strokeStyle = 'gold';
     ctx.lineWidth = 2;
     ctx.stroke();
 
     dino.y += dino.dy;
     if (dino.y < dino.groundY) {
-      dino.dy += dino.gravity;
+      // 押しっぱなしの間は重力を少し弱めて滞空時間を伸ばす
+      const currentGravity = (dino.isJumpHeld && dino.dy < 0)
+        ? dino.gravity * 0.72
+        : dino.gravity;
+      dino.dy += currentGravity;
       dino.grounded = false;
     } else {
       dino.y = dino.groundY;
@@ -1035,13 +1153,14 @@ ${recentSample || "（まだありません）"}
       dino.grounded = true;
     }
 
+    // ダイナソー描画
     ctx.fillStyle = 'gold';
     ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
     ctx.fillStyle = '#111';
     ctx.fillRect(dino.x + 20, dino.y + 6, 4, 4);
 
     frameCount++;
-    const spawnInterval = Math.max(45, Math.floor(100 - gameSpeed * 3));
+    const spawnInterval = Math.max(52, Math.floor(110 - gameSpeed * 3));
     if (frameCount % spawnInterval === 0) {
       if (Math.random() > 0.2) spawnObstacle();
     }
@@ -1050,8 +1169,7 @@ ${recentSample || "（まだありません）"}
       let obs = obstacles[i];
       obs.x -= gameSpeed;
 
-      ctx.fillStyle = '#f43f5e';
-      ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      drawCactus(obs);
 
       const pad = 4;
       if (
@@ -1061,7 +1179,7 @@ ${recentSample || "（まだありません）"}
         dino.y + dino.height - pad > obs.y + pad
       ) {
         clearAllTimers();
-        gameOver("障害物に衝突！");
+        gameOver("サボテンに衝突！");
         return;
       }
 
@@ -1086,6 +1204,7 @@ ${recentSample || "（まだありません）"}
   function gameOver(reason) {
     isPlaying = false;
     isGameOver = true;
+    dino.isJumpHeld = false;
     clearAllTimers();
     timerBar.style.width = '0%';
     saveDinoHighScoreIfNeeded(score, correctCount);
@@ -1096,7 +1215,11 @@ ${recentSample || "（まだありません）"}
 
   canvasContainer.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    jump();
+    startJump();
+  });
+
+  window.addEventListener('pointerup', () => {
+    releaseJump();
   });
 
   choiceBtns.forEach((btn) => {
@@ -1109,10 +1232,22 @@ ${recentSample || "（まだありません）"}
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'ArrowUp') {
       e.preventDefault();
-      jump();
+      if (!e.repeat) {
+        startJump();
+      }
+    }
+    if (e.code === 'ArrowDown') {
+      e.preventDefault();
+      fastFall();
     }
     if (['1', '2', '3', '4'].includes(e.key)) {
       handleAnswer(Number(e.key) - 1);
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+      releaseJump();
     }
   });
 </script>
