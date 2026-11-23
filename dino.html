@@ -897,16 +897,17 @@ ${recentSample || "（まだありません）"}
   let frameCount = 0;
   let currentQuestion = null;
 
+  // 枠内（高さ225px）に収まるジャンプ上限と、控えめな小ジャンプ設定
   const dino = {
     x: 50,
-    y: 162,
+    y: 168,
     width: 32,
     height: 36,
     dy: 0,
-    jumpPower: -13.5,
-    gravity: 0.62,
+    jumpPower: -10.2,
+    gravity: 0.65,
     grounded: true,
-    groundY: 162,
+    groundY: 168,
     isJumpHeld: false
   };
 
@@ -1109,8 +1110,9 @@ ${recentSample || "（まだありません）"}
 
   function releaseJump() {
     dino.isJumpHeld = false;
-    if (dino.dy < -4.5) {
-      dino.dy = -4.5;
+    // 指やキーを離したら上昇をほぼ止めて、目立ちにくい小ジャンプにする
+    if (dino.dy < -1.0) {
+      dino.dy = -1.0;
     }
   }
 
@@ -1126,15 +1128,15 @@ ${recentSample || "（まだありません）"}
 
     let pattern;
     if (r < 0.28 - speedBonus * 0.5) {
-      pattern = { count: 1, singleW: 15, height: 32, gap: 3 };
+      pattern = { count: 1, singleW: 15, height: 30, gap: 3 };
     } else if (r < 0.52 - speedBonus * 0.4) {
-      pattern = { count: 2, singleW: 15, height: 32, gap: 3 };
+      pattern = { count: 2, singleW: 15, height: 30, gap: 3 };
     } else if (r < 0.74) {
-      pattern = { count: 1, singleW: 22, height: 50, gap: 4 };
+      pattern = { count: 1, singleW: 22, height: 46, gap: 4 };
     } else if (r < 0.90 + speedBonus * 0.4) {
-      pattern = { count: 2, singleW: 22, height: 50, gap: 4 };
+      pattern = { count: 2, singleW: 22, height: 46, gap: 4 };
     } else {
-      pattern = { count: 3, singleW: 21, height: 50, gap: 4 };
+      pattern = { count: 3, singleW: 21, height: 46, gap: 4 };
     }
 
     const totalWidth = pattern.count * pattern.singleW + (pattern.count - 1) * pattern.gap;
@@ -1194,7 +1196,7 @@ ${recentSample || "（まだありません）"}
     dino.y += dino.dy;
     if (dino.y < dino.groundY) {
       const currentGravity = (dino.isJumpHeld && dino.dy < 0)
-        ? dino.gravity * 0.72
+        ? dino.gravity * 0.85
         : dino.gravity;
       dino.dy += currentGravity;
       dino.grounded = false;
@@ -1202,6 +1204,12 @@ ${recentSample || "（まだありません）"}
       dino.y = dino.groundY;
       dino.dy = 0;
       dino.grounded = true;
+    }
+
+    // 枠上端（y >= 12）からはみ出さないようにクランプ
+    if (dino.y < 12) {
+      dino.y = 12;
+      if (dino.dy < 0) dino.dy = 0;
     }
 
     ctx.fillStyle = 'gold';
