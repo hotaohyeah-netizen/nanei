@@ -248,13 +248,17 @@
     flex-shrink: 0;
   }
 
-  /* 5秒間解説ボックス */
+  /* 解説ボックス（正解時・ゲームオーバー時共通） */
   #explanation-box {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.72);
     border: 2px solid gold;
     border-radius: 10px;
     padding: 12px 14px;
     animation: fadeIn 0.2s ease;
+  }
+  #explanation-box.gameover-exp {
+    border-color: #f87171;
+    background: rgba(69, 10, 10, 0.55);
   }
   .exp-header {
     display: flex;
@@ -265,12 +269,19 @@
     font-weight: bold;
     color: gold;
   }
+  #explanation-box.gameover-exp .exp-header {
+    color: #fca5a5;
+  }
   #exp-timer {
     background: rgba(255, 215, 0, 0.2);
     color: gold;
     padding: 2px 8px;
     border-radius: 999px;
     font-size: 12px;
+  }
+  #explanation-box.gameover-exp #exp-timer {
+    background: rgba(248, 113, 113, 0.25);
+    color: #fecaca;
   }
   #explanation-text {
     margin: 0;
@@ -288,11 +299,13 @@
   #canvas-container {
     position: relative;
     width: 100%;
-    height: 215px;
+    height: 225px;
     background: rgba(0, 0, 0, 0.6);
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
   }
   canvas {
     display: block;
@@ -302,54 +315,42 @@
   #overlay-msg {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.88);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 20px;
+    padding: 16px 20px;
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
   }
   #overlay-msg h2 {
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     color: gold;
     font-size: 22px;
   }
   #overlay-msg p {
     margin: 0;
     color: #cbd5e1;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 13.5px;
+    line-height: 1.55;
   }
-
-  /* ジャンプ＆サボテン調整バー */
-  .tuning-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(255, 255, 255, 0.06);
-    border-top: 1px solid rgba(255, 215, 0, 0.25);
-    padding: 8px 14px;
-    border-bottom-left-radius: 13px;
-    border-bottom-right-radius: 13px;
-    font-size: 12px;
-    color: #e2e8f0;
+  .cooldown-badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-weight: bold;
+    font-size: 13px;
+    background: rgba(248, 113, 113, 0.25);
+    border: 1px solid #f87171;
+    color: #fecaca;
   }
-  .tuning-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .tuning-item input[type="range"] {
-    accent-color: gold;
-    width: 100px;
-    cursor: pointer;
-  }
-  .tuning-hint {
-    font-size: 11px;
-    color: #fde68a;
+  .cooldown-badge.ready {
+    background: rgba(74, 222, 128, 0.25);
+    border-color: #4ade80;
+    color: #bbf7d0;
   }
 
   .hidden { display: none !important; }
@@ -416,10 +417,10 @@
       <button class="choice-btn" data-index="3"><span class="choice-num">4</span><span class="choice-text">-</span></button>
     </div>
 
-    <!-- 解説表示（正解後5秒間表示） -->
+    <!-- 解説表示（正解時5秒間／ゲームオーバー時10秒間表示） -->
     <div id="explanation-box" class="hidden">
       <div class="exp-header">
-        <span>⭕ 正解！ポイント解説</span>
+        <span id="exp-title">⭕ 正解！ポイント解説</span>
         <span id="exp-timer">次の問題まで 5秒</span>
       </div>
       <p id="explanation-text">ここに解説が表示されます。</p>
@@ -428,7 +429,7 @@
 
   <!-- ゲームエリア -->
   <div id="canvas-container">
-    <canvas id="gameCanvas" width="720" height="215"></canvas>
+    <canvas id="gameCanvas" width="720" height="225"></canvas>
     <div id="overlay-msg">
       <h2 id="overlay-title">DINO AI QUIZ</h2>
       <p id="overlay-sub">
@@ -437,22 +438,8 @@
         時間切れ・不正解・サボテン衝突で即ゲームオーバー。<br><br>
         <b>[ 画面タップ または Spaceキー でスタート ]</b>
       </p>
+      <div id="retry-cooldown-badge" class="cooldown-badge hidden"></div>
     </div>
-  </div>
-
-  <!-- ジャンプ＆サボテン微調整バー -->
-  <div class="tuning-bar">
-    <div class="tuning-item">
-      <label for="jump-power-slider">ジャンプ力:</label>
-      <input type="range" id="jump-power-slider" min="11" max="17" step="0.5" value="13.5">
-      <span id="jump-power-val">13.5</span>
-    </div>
-    <div class="tuning-item">
-      <label for="cactus-scale-slider">サボテン高さ:</label>
-      <input type="range" id="cactus-scale-slider" min="0.8" max="1.5" step="0.1" value="1.1">
-      <span id="cactus-scale-val">1.1x</span>
-    </div>
-    <span class="tuning-hint">※押し長さでも高さを調節できます</span>
   </div>
 </div>
 
@@ -501,6 +488,7 @@
   const WORKER_URL = "https://nanei-ai.hotaohyeah.workers.dev";
   const TARGET_QUESTIONS = 3000;
   const SUBJECTS = ["英語", "数学", "国語", "理科", "社会"];
+  const RETRY_COOLDOWN_SECONDS = 10;
 
   let allQuestionsPool = [];
   let seenQuestionTexts = new Set();
@@ -869,7 +857,7 @@ ${recentSample || "（まだありません）"}
   });
 
   // ==========================================
-  // ゲームロジック本体（高いサボテン＆可変ジャンプ対応）
+  // ゲームロジック本体
   // ==========================================
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -877,6 +865,7 @@ ${recentSample || "（まだありません）"}
   const overlayMsg = document.getElementById('overlay-msg');
   const overlayTitle = document.getElementById('overlay-title');
   const overlaySub = document.getElementById('overlay-sub');
+  const retryCooldownBadge = document.getElementById('retry-cooldown-badge');
 
   const quizArea = document.getElementById('quiz-area');
   const subjectBadge = document.getElementById('subject-badge');
@@ -885,19 +874,17 @@ ${recentSample || "（まだありません）"}
   const choicesContainer = document.getElementById('choices-container');
   const choiceBtns = document.querySelectorAll('.choice-btn');
   const explanationBox = document.getElementById('explanation-box');
+  const expTitle = document.getElementById('exp-title');
   const explanationText = document.getElementById('explanation-text');
   const expTimerDisplay = document.getElementById('exp-timer');
   const timerBar = document.getElementById('timer-bar');
 
-  const jumpPowerSlider = document.getElementById('jump-power-slider');
-  const jumpPowerVal = document.getElementById('jump-power-val');
-  const cactusScaleSlider = document.getElementById('cactus-scale-slider');
-  const cactusScaleVal = document.getElementById('cactus-scale-val');
-
   let isPlaying = false;
   let isGameOver = false;
   let isShowingExplanation = false;
+  let isRetryLocked = false;
   let expCountdownTimer = null;
+  let retryCooldownTimer = null;
 
   const QUESTION_TIME_LIMIT = 10.0;
   let timeLeft = QUESTION_TIME_LIMIT;
@@ -910,31 +897,18 @@ ${recentSample || "（まだありません）"}
   let frameCount = 0;
   let currentQuestion = null;
 
-  let cactusHeightScale = Number(cactusScaleSlider.value);
-
   const dino = {
     x: 50,
-    y: 152,
+    y: 162,
     width: 32,
     height: 36,
     dy: 0,
-    jumpPower: -Number(jumpPowerSlider.value),
+    jumpPower: -13.5,
     gravity: 0.62,
     grounded: true,
-    groundY: 152,
+    groundY: 162,
     isJumpHeld: false
   };
-
-  jumpPowerSlider.addEventListener('input', () => {
-    const val = Number(jumpPowerSlider.value);
-    dino.jumpPower = -val;
-    jumpPowerVal.textContent = val.toFixed(1);
-  });
-
-  cactusScaleSlider.addEventListener('input', () => {
-    cactusHeightScale = Number(cactusScaleSlider.value);
-    cactusScaleVal.textContent = `${cactusHeightScale.toFixed(1)}x`;
-  });
 
   function clearAllTimers() {
     if (expCountdownTimer) {
@@ -948,9 +922,18 @@ ${recentSample || "（まだありません）"}
     isShowingExplanation = false;
   }
 
+  function clearRetryCooldownTimer() {
+    if (retryCooldownTimer) {
+      clearInterval(retryCooldownTimer);
+      retryCooldownTimer = null;
+    }
+    isRetryLocked = false;
+  }
+
   function loadNextQuestion() {
     clearAllTimers();
     quizArea.classList.remove('correct-flash', 'wrong-flash');
+    explanationBox.classList.remove('gameover-exp');
     explanationBox.classList.add('hidden');
     choicesContainer.classList.remove('hidden');
 
@@ -999,7 +982,8 @@ ${recentSample || "（まだありません）"}
 
     timerBar.style.width = '100%';
     choicesContainer.classList.add('hidden');
-    explanationBox.classList.remove('hidden');
+    explanationBox.classList.remove('hidden', 'gameover-exp');
+    expTitle.textContent = "⭕ 正解！ポイント解説";
     explanationText.textContent = currentQuestion.explanation || "正解です！この調子で走り続けよう！";
     expTimerDisplay.textContent = `次の問題まで ${remainingSeconds}秒`;
 
@@ -1015,6 +999,53 @@ ${recentSample || "（まだありません）"}
         loadNextQuestion();
       }
     }, 1000);
+  }
+
+  function showGameOverExplanation(cooldownSec) {
+    choicesContainer.classList.add('hidden');
+    explanationBox.classList.remove('hidden');
+    explanationBox.classList.add('gameover-exp');
+
+    if (currentQuestion) {
+      const correctChoice = currentQuestion.choices?.[currentQuestion.ans] ?? "";
+      const expBody = currentQuestion.explanation || "この問題のポイントを確認して、次の挑戦に活かしましょう！";
+      expTitle.textContent = `❌ 解説 [${currentQuestion.subject || "問題"}]（正解: ${correctChoice}）`;
+      explanationText.textContent = `${currentQuestion.q} ／ ${expBody}`;
+    } else {
+      expTitle.textContent = "❌ 復習ポイント";
+      explanationText.textContent = "制限時間やサボテンのタイミングを意識して再挑戦しましょう！";
+    }
+    expTimerDisplay.textContent = `再挑戦まで ${cooldownSec}秒`;
+  }
+
+  function startRetryCooldown(seconds) {
+    clearRetryCooldownTimer();
+    let remaining = seconds;
+    isRetryLocked = remaining > 0;
+
+    retryCooldownBadge.classList.remove('hidden');
+    if (remaining > 0) {
+      retryCooldownBadge.classList.remove('ready');
+      retryCooldownBadge.textContent = `解説確認中… 再挑戦まであと ${remaining}秒`;
+      expTimerDisplay.textContent = `再挑戦まで ${remaining}秒`;
+
+      retryCooldownTimer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          retryCooldownBadge.textContent = `解説確認中… 再挑戦まであと ${remaining}秒`;
+          expTimerDisplay.textContent = `再挑戦まで ${remaining}秒`;
+        } else {
+          clearRetryCooldownTimer();
+          retryCooldownBadge.classList.add('ready');
+          retryCooldownBadge.textContent = "準備OK！タップ または Spaceキー でリトライ";
+          expTimerDisplay.textContent = "リトライ可能！";
+        }
+      }, 1000);
+    } else {
+      retryCooldownBadge.classList.add('ready');
+      retryCooldownBadge.textContent = "タップ または Spaceキー でリトライ";
+      expTimerDisplay.textContent = "リトライ可能！";
+    }
   }
 
   function handleAnswer(selectedIndex) {
@@ -1039,7 +1070,10 @@ ${recentSample || "（まだありません）"}
   let obstacles = [];
 
   function startGame() {
+    if (isRetryLocked) return;
     clearAllTimers();
+    clearRetryCooldownTimer();
+
     isPlaying = true;
     isGameOver = false;
     score = 0;
@@ -1054,13 +1088,16 @@ ${recentSample || "（まだありません）"}
 
     quizStats.textContent = `正解数: 0問`;
     overlayMsg.classList.add('hidden');
+    retryCooldownBadge.classList.add('hidden');
     loadNextQuestion();
     requestAnimationFrame(update);
   }
 
   function startJump() {
     if (!isPlaying || isGameOver) {
-      startGame();
+      if (!isRetryLocked) {
+        startGame();
+      }
       return;
     }
     dino.isJumpHeld = true;
@@ -1072,7 +1109,6 @@ ${recentSample || "（まだありません）"}
 
   function releaseJump() {
     dino.isJumpHeld = false;
-    // 上昇中にボタンを離したら速度を抑えて小ジャンプにする
     if (dino.dy < -4.5) {
       dino.dy = -4.5;
     }
@@ -1085,45 +1121,61 @@ ${recentSample || "（まだありません）"}
   }
 
   function spawnObstacle() {
-    // 高さを大きくしたサボテンバリエーション（中・大・巨大）
-    const baseVariants = [
-      { baseH: 40, width: 20 },
-      { baseH: 50, width: 22 },
-      { baseH: 58, width: 26 }
-    ];
-    const picked = baseVariants[Math.floor(Math.random() * baseVariants.length)];
-    const height = Math.round(picked.baseH * cactusHeightScale);
+    const r = Math.random();
+    const speedBonus = Math.min(0.25, (gameSpeed - 5.5) * 0.025);
+
+    let pattern;
+    if (r < 0.28 - speedBonus * 0.5) {
+      pattern = { count: 1, singleW: 15, height: 32, gap: 3 };
+    } else if (r < 0.52 - speedBonus * 0.4) {
+      pattern = { count: 2, singleW: 15, height: 32, gap: 3 };
+    } else if (r < 0.74) {
+      pattern = { count: 1, singleW: 22, height: 50, gap: 4 };
+    } else if (r < 0.90 + speedBonus * 0.4) {
+      pattern = { count: 2, singleW: 22, height: 50, gap: 4 };
+    } else {
+      pattern = { count: 3, singleW: 21, height: 50, gap: 4 };
+    }
+
+    const totalWidth = pattern.count * pattern.singleW + (pattern.count - 1) * pattern.gap;
     const groundBottom = dino.groundY + dino.height;
 
     obstacles.push({
       x: canvas.width,
-      y: groundBottom - height,
-      width: picked.width,
-      height: height
+      y: groundBottom - pattern.height,
+      width: totalWidth,
+      height: pattern.height,
+      count: pattern.count,
+      singleW: pattern.singleW,
+      gap: pattern.gap
     });
   }
 
-  function drawCactus(obs) {
-    const trunkW = Math.max(8, Math.floor(obs.width * 0.45));
-    const trunkX = obs.x + Math.floor((obs.width - trunkW) / 2);
+  function drawSingleCactus(x, y, w, h) {
+    const trunkW = Math.max(6, Math.floor(w * 0.44));
+    const trunkX = x + Math.floor((w - trunkW) / 2);
 
     ctx.fillStyle = '#22c55e';
-    // 中央の幹
-    ctx.fillRect(trunkX, obs.y, trunkW, obs.height);
+    ctx.fillRect(trunkX, y, trunkW, h);
 
-    // 左の腕
-    const armW = Math.max(4, Math.floor(obs.width * 0.25));
-    const leftArmY = obs.y + Math.floor(obs.height * 0.32);
-    const leftArmH = Math.floor(obs.height * 0.26);
-    ctx.fillRect(obs.x, leftArmY, armW, leftArmH);
-    ctx.fillRect(obs.x, leftArmY + leftArmH - 4, trunkX - obs.x + 2, 4);
+    const armW = Math.max(3, Math.floor(w * 0.24));
+    const leftArmY = y + Math.floor(h * 0.32);
+    const leftArmH = Math.floor(h * 0.26);
+    ctx.fillRect(x, leftArmY, armW, leftArmH);
+    ctx.fillRect(x, leftArmY + leftArmH - 3, trunkX - x + 2, 3);
 
-    // 右の腕
-    const rightArmX = obs.x + obs.width - armW;
-    const rightArmY = obs.y + Math.floor(obs.height * 0.22);
-    const rightArmH = Math.floor(obs.height * 0.28);
+    const rightArmX = x + w - armW;
+    const rightArmY = y + Math.floor(h * 0.22);
+    const rightArmH = Math.floor(h * 0.28);
     ctx.fillRect(rightArmX, rightArmY, armW, rightArmH);
-    ctx.fillRect(trunkX + trunkW - 2, rightArmY + rightArmH - 4, rightArmX - (trunkX + trunkW) + armW, 4);
+    ctx.fillRect(trunkX + trunkW - 2, rightArmY + rightArmH - 3, rightArmX - (trunkX + trunkW) + armW, 3);
+  }
+
+  function drawCactusCluster(obs) {
+    for (let c = 0; c < obs.count; c++) {
+      const cx = obs.x + c * (obs.singleW + obs.gap);
+      drawSingleCactus(cx, obs.y, obs.singleW, obs.height);
+    }
   }
 
   function update() {
@@ -1141,7 +1193,6 @@ ${recentSample || "（まだありません）"}
 
     dino.y += dino.dy;
     if (dino.y < dino.groundY) {
-      // 押しっぱなしの間は重力を少し弱めて滞空時間を伸ばす
       const currentGravity = (dino.isJumpHeld && dino.dy < 0)
         ? dino.gravity * 0.72
         : dino.gravity;
@@ -1153,23 +1204,22 @@ ${recentSample || "（まだありません）"}
       dino.grounded = true;
     }
 
-    // ダイナソー描画
     ctx.fillStyle = 'gold';
     ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
     ctx.fillStyle = '#111';
     ctx.fillRect(dino.x + 20, dino.y + 6, 4, 4);
 
     frameCount++;
-    const spawnInterval = Math.max(52, Math.floor(110 - gameSpeed * 3));
+    const spawnInterval = Math.max(54, Math.floor(112 - gameSpeed * 3));
     if (frameCount % spawnInterval === 0) {
-      if (Math.random() > 0.2) spawnObstacle();
+      if (Math.random() > 0.18) spawnObstacle();
     }
 
     for (let i = obstacles.length - 1; i >= 0; i--) {
       let obs = obstacles[i];
       obs.x -= gameSpeed;
 
-      drawCactus(obs);
+      drawCactusCluster(obs);
 
       const pad = 4;
       if (
@@ -1208,9 +1258,14 @@ ${recentSample || "（まだありません）"}
     clearAllTimers();
     timerBar.style.width = '0%';
     saveDinoHighScoreIfNeeded(score, correctCount);
+
+    showGameOverExplanation(RETRY_COOLDOWN_SECONDS);
+
     overlayTitle.textContent = 'GAME OVER';
-    overlaySub.innerHTML = `${reason}<br>スコア: ${Math.floor(score)} (最高: ${highScore}) | 正解数: ${correctCount}問<br><br><b>[ タップまたはSpaceキーでリトライ ]</b>`;
+    overlaySub.innerHTML = `${reason}<br>スコア: ${Math.floor(score)} (最高: ${highScore}) | 正解数: ${correctCount}問`;
     overlayMsg.classList.remove('hidden');
+
+    startRetryCooldown(RETRY_COOLDOWN_SECONDS);
   }
 
   canvasContainer.addEventListener('pointerdown', (e) => {
