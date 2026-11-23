@@ -434,7 +434,7 @@
       <h2 id="overlay-title">DINO AI QUIZ</h2>
       <p id="overlay-sub">
         走りながら上の4択に答えよう！（1問制限時間: 10秒）<br>
-        <b>長押しで大ジャンプ / チョン押しで小ジャンプ</b>（↓キーで急降下）<br>
+        <b>タップ または Space / ↑キー でジャンプ</b>（↓キーで急降下）<br>
         時間切れ・不正解・サボテン衝突で即ゲームオーバー。<br><br>
         <b>[ 画面タップ または Spaceキー でスタート ]</b>
       </p>
@@ -897,18 +897,17 @@ ${recentSample || "（まだありません）"}
   let frameCount = 0;
   let currentQuestion = null;
 
-  // 小ジャンプは前の感じ（-4.5）を維持しつつ、大ジャンプの上限だけを控えめに調整
+  // 押し加減なしの単一ジャンプ（3連大サボテンを飛び越えつつ枠内に収まる高さ）
   const dino = {
     x: 50,
     y: 162,
     width: 32,
     height: 36,
     dy: 0,
-    jumpPower: -8.6,
-    gravity: 0.65,
+    jumpPower: -9.6,
+    gravity: 0.62,
     grounded: true,
-    groundY: 162,
-    isJumpHeld: false
+    groundY: 162
   };
 
   function clearAllTimers() {
@@ -1085,7 +1084,6 @@ ${recentSample || "（まだありません）"}
     dino.y = dino.groundY;
     dino.dy = 0;
     dino.grounded = true;
-    dino.isJumpHeld = false;
 
     quizStats.textContent = `正解数: 0問`;
     overlayMsg.classList.add('hidden');
@@ -1094,25 +1092,16 @@ ${recentSample || "（まだありません）"}
     requestAnimationFrame(update);
   }
 
-  function startJump() {
+  function jump() {
     if (!isPlaying || isGameOver) {
       if (!isRetryLocked) {
         startGame();
       }
       return;
     }
-    dino.isJumpHeld = true;
     if (dino.grounded) {
       dino.dy = dino.jumpPower;
       dino.grounded = false;
-    }
-  }
-
-  function releaseJump() {
-    dino.isJumpHeld = false;
-    // 小ジャンプは前の感じ（-4.5）を維持
-    if (dino.dy < -4.5) {
-      dino.dy = -4.5;
     }
   }
 
@@ -1195,10 +1184,7 @@ ${recentSample || "（まだありません）"}
 
     dino.y += dino.dy;
     if (dino.y < dino.groundY) {
-      const currentGravity = (dino.isJumpHeld && dino.dy < 0)
-        ? dino.gravity * 0.95
-        : dino.gravity;
-      dino.dy += currentGravity;
+      dino.dy += dino.gravity;
       dino.grounded = false;
     } else {
       dino.y = dino.groundY;
@@ -1261,7 +1247,6 @@ ${recentSample || "（まだありません）"}
   function gameOver(reason) {
     isPlaying = false;
     isGameOver = true;
-    dino.isJumpHeld = false;
     clearAllTimers();
     timerBar.style.width = '0%';
     saveDinoHighScoreIfNeeded(score, correctCount);
@@ -1277,11 +1262,7 @@ ${recentSample || "（まだありません）"}
 
   canvasContainer.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    startJump();
-  });
-
-  window.addEventListener('pointerup', () => {
-    releaseJump();
+    jump();
   });
 
   choiceBtns.forEach((btn) => {
@@ -1294,9 +1275,7 @@ ${recentSample || "（まだありません）"}
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'ArrowUp') {
       e.preventDefault();
-      if (!e.repeat) {
-        startJump();
-      }
+      jump();
     }
     if (e.code === 'ArrowDown') {
       e.preventDefault();
@@ -1304,12 +1283,6 @@ ${recentSample || "（まだありません）"}
     }
     if (['1', '2', '3', '4'].includes(e.key)) {
       handleAnswer(Number(e.key) - 1);
-    }
-  });
-
-  window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space' || e.code === 'ArrowUp') {
-      releaseJump();
     }
   });
 </script>
