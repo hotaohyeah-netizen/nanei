@@ -1,3 +1,8 @@
+<script>
+if (sessionStorage.getItem("nanei_login") !== "ok") {
+  location.replace("login.html");
+}
+</script>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -20,7 +25,7 @@
 
 <div class="card">
 
-<h2>🎬 前編①</h2>
+<h2>前編①</h2>
 
 <video width="100%" controls>
 <source src="zenpen1.mp4" type="video/mp4">
@@ -30,7 +35,7 @@
 
 <div class="card">
 
-<h2>🎬 前編②</h2>
+<h2>前編②</h2>
 
 <video width="100%" controls>
 <source src="zenpen2.mp4" type="video/mp4">
@@ -40,7 +45,7 @@
 
 <div class="card">
 
-<h2>🎬 後編①</h2>
+<h2>後編①</h2>
 
 <video width="100%" controls>
 <source src="kouhen1.mp4" type="video/mp4">
@@ -50,7 +55,7 @@
 
 <div class="card">
 
-<h2>🎬 後編②</h2>
+<h2>後編②</h2>
 
 <video width="100%" controls>
 <source src="kouhen2.mp4" type="video/mp4">
@@ -60,7 +65,7 @@
 
 <div class="card">
 
-<h2>🎬 おまけ</h2>
+<h2>おまけ</h2>
 
 <video width="100%" controls>
 <source src="omake.mp4" type="video/mp4">

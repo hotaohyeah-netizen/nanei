@@ -13,7 +13,7 @@
 
 <div class="card">
 
-<input type="password" id="pass">
+<input type="password" id="pass" placeholder="パスコードを入力">
 
 <button onclick="login()">
 ログイン
@@ -22,21 +22,24 @@
 </div>
 
 <script>
+function login() {
+  const inputPass = document.getElementById("pass").value;
 
-function login(){
-
-if(document.getElementById("pass").value=="moriyama1-22-1"){
-
-location.href="menu.html";
-
-}else{
-
-alert("パスコードが違います");
-
+  if (inputPass === "moriyama1-22-1") {
+    // ログイン成功の印を保存
+    sessionStorage.setItem("nanei_login", "ok");
+    location.href = "menu.html";
+  } else {
+    alert("パスコードが違います");
+  }
 }
 
-}
-
+// Enterキーでもログインできるようにする
+document.getElementById("pass").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    login();
+  }
+});
 </script>
 
 </body>
