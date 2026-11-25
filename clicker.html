@@ -1,492 +1,360 @@
+<script>
+if (sessionStorage.getItem("nanei_login") !== "ok") {
+  location.replace("login.html");
+}
+</script>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ナンザン総合ゲームセンター</title>
+<title>ナンザンクリッカー</title>
+<link rel="stylesheet" href="style.css">
 <style>
-  body { font-family: sans-serif; background: #eef2f6; margin: 0; padding: 16px; color: #1e293b; }
-  .container { max-width: 960px; margin: 0 auto; }
-  .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 16px; }
-  h1, h2, h3 { margin: 0 0 10px; }
-  h1 { font-size: 22px; }
-  h2 { font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
-  input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
-  button { padding: 8px 12px; border: none; border-radius: 8px; background: #2563eb; color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; }
-  button:disabled { background: #94a3b8; cursor: not-allowed; }
-  .btn-green { background: #16a34a; }
-  .btn-purple { background: #7c3aed; }
-  .btn-orange { background: #ea580c; }
-  .btn-gray { background: #64748b; }
-  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
-  .shop-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 8px; background: #f8fafc; }
-  .shop-item p { margin: 4px 0; font-size: 13px; }
-  canvas { width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; display: block; }
-  .log { font-size: 13px; color: #334155; background: #f1f5f9; padding: 8px; border-radius: 6px; margin-top: 8px; min-height: 20px; }
-  .hidden { display: none; }
-  .badge { display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+.hidden {
+  display: none;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 340px;
+  margin: 12px auto;
+}
+.auth-form input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 15px;
+}
+.auth-buttons {
+  display: flex;
+  gap: 8px;
+}
+.auth-buttons button {
+  flex: 1;
+}
+.player-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.battle-stage {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  text-align: center;
+}
+.hp-bar-bg {
+  width: 100%;
+  max-width: 320px;
+  height: 16px;
+  margin: 8px auto;
+  background: #cbd5e1;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.hp-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: #ef4444;
+  transition: width 0.15s ease;
+}
+.slime-sprite {
+  display: inline-block;
+  font-size: 42px;
+  line-height: 1.2;
+  margin: 6px 0;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s ease;
+}
+.slime-sprite:active {
+  transform: scale(0.9);
+}
+.upgrade-box {
+  text-align: left;
+  margin-top: 10px;
+}
+.upgrade-row {
+  margin: 10px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.25);
+}
+.upgrade-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.small-log {
+  font-size: 13px;
+  margin-top: 8px;
+  min-height: 20px;
+}
 </style>
 </head>
 <body>
-<div class="container">
 
-  <!-- ログイン・新規登録画面 -->
-  <div id="authScreen" class="card" style="max-width:420px; margin: 40px auto;">
-    <h1>ナンザンプレイヤーログイン</h1>
-    <p style="font-size:13px; color:#64748b;">好きなユーザー名と合言葉（パスコード）でセーブデータを管理します。</p>
-    <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
-      <input type="text" id="usernameInput" placeholder="ユーザー名（例: ナンザン太郎）">
-      <input type="password" id="passcodeInput" placeholder="自分用の合言葉（パスコード）">
-      <div class="row">
-        <button onclick="loginUser()" style="flex:1;">ログイン</button>
-        <button onclick="registerUser()" class="btn-green" style="flex:1;">新規登録して開始</button>
-      </div>
+<header>
+  <h1>ナンザンクリッカー</h1>
+  <p>タップ＆スライム伝説風バトルでポイントを稼ごう！</p>
+</header>
+
+<!-- プレイヤーログイン・新規登録画面 -->
+<div id="authCard" class="card">
+  <h2>プレイヤーログイン</h2>
+  <p style="font-size:13px;">ユーザー名と自分用の合言葉（パスコード）でセーブデータを管理します。</p>
+  <div class="auth-form">
+    <input type="text" id="usernameInput" placeholder="ユーザー名（例: ナンザン太郎）">
+    <input type="password" id="passcodeInput" placeholder="合言葉（パスコード）">
+    <div class="auth-buttons">
+      <button onclick="loginPlayer()">ログイン</button>
+      <button onclick="registerPlayer()">新規登録</button>
     </div>
-    <div id="authLog" class="log">ユーザー名と合言葉を入力してください。</div>
   </div>
+  <div id="authLog" class="small-log">初めて遊ぶ場合は、好きな名前と合言葉を入れて「新規登録」を押してください。</div>
+</div>
 
-  <!-- ゲームメイン画面 -->
-  <div id="gameScreen" class="hidden">
-    <div class="card">
-      <div class="row" style="justify-content:space-between;">
-        <div>
-          <strong>プレイヤー: <span id="dispUser"></span></strong> ／
-          所持ポイント: <span style="font-size:18px; color:#16a34a; font-weight:bold;"><span id="dispPts">0</span> pt</span>
-        </div>
-        <button class="btn-gray" onclick="logoutUser()">ログアウト</button>
-      </div>
-      <div class="row" style="font-size:13px; margin-top:8px;">
-        <span class="badge">クリック力: +<span id="dispPower">1</span></span>
-        <span class="badge">必勝チケット: <span id="dispSureWin">0</span>枚</span>
-        <span class="badge">ギュイーン: <span id="dispGyuin">未解放</span></span>
-        <span class="badge">問題制限時間: +<span id="dispExtraTime">0</span>秒</span>
-        <span class="badge">サボテン無効: <span id="dispShield">0</span>個</span>
-      </div>
-    </div>
-
-    <div class="grid">
-      <!-- 1. ナンザンクリッカー＆ショップ -->
-      <div class="card">
-        <h2>1. ナンザンクリッカー</h2>
-        <button class="btn-green" onclick="clickNanzan()" style="width:100%; padding:16px; font-size:18px; margin-bottom:10px;">
-          ナンザンをクリック！ (+<span id="btnPower">1</span>pt)
-        </button>
-
-        <h3>バフショップ（pt消費）</h3>
-        <div class="shop-item">
-          <strong>クリック力強化（現在 Lv.<span id="powerLv">1</span>）</strong>
-          <p>1回のクリックで増えるptが +1 されます。</p>
-          <button id="buyPowerBtn" onclick="buyItem('power')">購入（<span id="costPower">15</span> pt）</button>
-        </div>
-
-        <div class="shop-item">
-          <strong>【じゃんけん】必勝チケット（1回勝ち）</strong>
-          <p>次のじゃんけんで必ず勝ちます（消費型）。</p>
-          <button id="buySureWinBtn" class="btn-purple" onclick="buyItem('sureWin')">購入（30 pt）</button>
-        </div>
-
-        <div class="shop-item">
-          <strong>【じゃんけん】独自手「ギュイーン」解放</strong>
-          <p>グー・チョキに勝ち、パーとあいこになる最強手（永久解放）。</p>
-          <button id="buyGyuinBtn" class="btn-purple" onclick="buyItem('gyuin')">解放する（80 pt）</button>
-        </div>
-
-        <div class="shop-item">
-          <strong>【ダイナソー】問題制限時間 ＋1秒</strong>
-          <p>ゲームオーバー時の問題制限時間が +1秒 延びます（最大+10秒）。</p>
-          <button id="buyTimeBtn" class="btn-orange" onclick="buyItem('extraTime')">購入（40 pt）</button>
-        </div>
-
-        <div class="shop-item">
-          <strong>【ダイナソー】サボテン1回無効シールド</strong>
-          <p>サボテンに1回当たっても破壊して無効化します（最大3個まで所持）。</p>
-          <button id="buyShieldBtn" class="btn-orange" onclick="buyItem('shield')">購入（50 pt）</button>
-        </div>
-      </div>
-
-      <!-- 2. じゃんけんゲーム -->
-      <div class="card">
-        <h2>2. ナンザンじゃんけん</h2>
-        <p style="font-size:13px;">勝利すると <strong>+20 pt</strong> 獲得！</p>
-        <div class="row">
-          <label style="font-size:13px; cursor:pointer;">
-            <input type="checkbox" id="useSureWinCheck"> 必勝チケットを使う（残り <span id="rpsSureWinCount">0</span>枚）
-          </label>
-        </div>
-        <div class="row">
-          <button onclick="playRps('グー')">グー</button>
-          <button onclick="playRps('チョキ')">チョキ</button>
-          <button onclick="playRps('パー')">パー</button>
-          <button id="gyuinHandBtn" class="btn-purple hidden" onclick="playRps('ギュイーン')">ギュイーン！</button>
-        </div>
-        <div id="rpsLog" class="log">出す手を選んでください。</div>
-      </div>
-
-      <!-- 3. ナンザンダイナソー -->
-      <div class="card">
-        <h2>3. ナンザンダイナソー</h2>
-        <p style="font-size:13px;">単一ジャンプで小・大・3連大サボテンを回避！</p>
-        <canvas id="dinoCanvas" width="280" height="140"></canvas>
-        <div class="row">
-          <button id="dinoStartBtn" class="btn-green" onclick="startDino()">スタート</button>
-          <button onclick="jumpDino()">ジャンプ</button>
-        </div>
-        <div style="font-size:13px;">
-          スコア: <strong id="dinoScore">0</strong> ／
-          装備中シールド: <strong id="dinoActiveShield">0</strong>回
-        </div>
-
-        <!-- ゲームオーバー時の問題＆解説エリア -->
-        <div id="quizBox" class="shop-item hidden" style="margin-top:10px; border-color:#f97316; background:#fff7ed;">
-          <strong>【復習問題】残り時間: <span id="quizTimer">10</span>秒</strong>
-          <p id="quizQuestion">問題文</p>
-          <div class="row" id="quizChoices"></div>
-          <p id="quizExplain" style="color:#9a3412; font-weight:bold;"></p>
-        </div>
-
-        <div id="dinoLog" class="log">スタートを押して開始！</div>
-      </div>
+<!-- ゲーム本編画面 -->
+<div id="gameArea" class="hidden">
+  <div class="card">
+    <div class="player-bar">
+      <div>ログイン中：<strong id="currentUserLabel"></strong></div>
+      <button onclick="logoutPlayer()">ログアウト</button>
     </div>
   </div>
 
+  <div class="card">
+    <h2>ステータス</h2>
+    <p>所持ポイント：<strong id="pts">0</strong> pt</p>
+    <p>クリック攻撃力：<strong id="tapDmg">1</strong> ／ 自動DPS：<strong id="autoDps">2</strong></p>
+
+    <button onclick="tapAttack()" style="font-size:18px; padding:14px 24px; margin-top:8px;">
+      ナンザンをタップ攻撃！（+<span id="tapDmgBtn">1</span> pt &amp; 敵にダメージ）
+    </button>
+  </div>
+
+  <div class="card">
+    <h2>スライム伝説風 自動バトル</h2>
+    <div class="battle-stage">
+      <div><strong>ステージ <span id="stageNum">1</span></strong> － <span id="enemyName">ぷにぷにスライム</span></div>
+      <div id="slimeSprite" class="slime-sprite" onclick="tapAttack()" title="タップで追撃！">🟢</div>
+      <div>HP: <span id="enemyHp">20</span> / <span id="enemyMaxHp">20</span></div>
+      <div class="hp-bar-bg">
+        <div id="enemyHpBar" class="hp-bar-fill"></div>
+      </div>
+      <div style="font-size:13px;">討伐数：<strong id="killCount">0</strong> 体</div>
+    </div>
+    <div id="battleLog" class="small-log">自動攻撃中！スライムをタップしてもダメージを与えられます。</div>
+  </div>
+
+  <div class="card">
+    <h2>強化</h2>
+    <div class="upgrade-box">
+      <div class="upgrade-row">
+        <strong>クリック攻撃力 +1</strong>（必要：<span id="costTap">15</span> pt）<br>
+        <button id="btnTap" onclick="buyTapUpgrade()">強化する</button>
+      </div>
+
+      <div class="upgrade-row">
+        <strong>自動攻撃力（DPS） +2</strong>（必要：<span id="costDps">25</span> pt）<br>
+        <button id="btnDps" onclick="buyDpsUpgrade()">強化する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <a href="menu.html">
+    <button>会員ページへ戻る</button>
+  </a>
 </div>
 
 <script>
-const STORAGE_PREFIX = "nanei_user_";
-let currentUser = null;
-let userData = null;
+const USER_PREFIX = "nanzanClickerUser_";
+const LAST_USER_KEY = "nanzanClickerLastUser";
 
-function defaultData(passcode) {
+let currentUser = null;
+let state = null;
+let autoAttackTimer = null;
+
+function createDefaultState(passcode) {
   return {
     passcode,
     pts: 0,
-    power: 1,
-    powerCost: 15,
-    sureWin: 0,
-    gyuinUnlocked: false,
-    extraTime: 0,
-    shieldStock: 0
+    tapDmg: 1,
+    autoDps: 2,
+    costTap: 15,
+    costDps: 25,
+    stage: 1,
+    kills: 0
   };
 }
 
-function saveUserData() {
-  if (!currentUser || !userData) return;
-  localStorage.setItem(STORAGE_PREFIX + currentUser, JSON.stringify(userData));
-  renderAll();
+const enemyTemplates = [
+  { name: "ぷにぷにスライム", icon: "🟢", baseHp: 20, reward: 8 },
+  { name: "ほのおスライム", icon: "🔴", baseHp: 45, reward: 16 },
+  { name: "みずいろスライム", icon: "🔵", baseHp: 85, reward: 28 },
+  { name: "黄金キングスライム", icon: "🟡", baseHp: 150, reward: 50 }
+];
+
+function getStageEnemy(stage) {
+  const tpl = enemyTemplates[(stage - 1) % enemyTemplates.length];
+  const scale = 1 + (stage - 1) * 0.35;
+  const maxHp = Math.round(tpl.baseHp * scale);
+  const reward = Math.round(tpl.reward * (1 + (stage - 1) * 0.25));
+  return { name: tpl.name, icon: tpl.icon, maxHp, reward };
 }
 
-function registerUser() {
+let currentEnemy = getStageEnemy(1);
+let enemyHp = currentEnemy.maxHp;
+
+function saveUser() {
+  if (!currentUser || !state) return;
+  localStorage.setItem(USER_PREFIX + currentUser, JSON.stringify(state));
+  render();
+}
+
+function registerPlayer() {
   const name = document.getElementById("usernameInput").value.trim();
   const pass = document.getElementById("passcodeInput").value.trim();
   if (!name || !pass) {
-    document.getElementById("authLog").textContent = "ユーザー名と合言葉の両方を入力してください。";
+    document.getElementById("authLog").textContent = "ユーザー名と合言葉を入力してください。";
     return;
   }
-  if (localStorage.getItem(STORAGE_PREFIX + name)) {
-    document.getElementById("authLog").textContent = "そのユーザー名はすでに使われています。ログインするか別の名前にしてください。";
+  if (localStorage.getItem(USER_PREFIX + name)) {
+    document.getElementById("authLog").textContent = "そのユーザー名はすでに使われています。「ログイン」を押すか別の名前にしてください。";
     return;
   }
   currentUser = name;
-  userData = defaultData(pass);
-  saveUserData();
-  enterGame();
+  state = createDefaultState(pass);
+  localStorage.setItem(LAST_USER_KEY, name);
+  saveUser();
+  startGameSession();
 }
 
-function loginUser() {
+function loginPlayer() {
   const name = document.getElementById("usernameInput").value.trim();
   const pass = document.getElementById("passcodeInput").value.trim();
-  const raw = localStorage.getItem(STORAGE_PREFIX + name);
+  const raw = localStorage.getItem(USER_PREFIX + name);
   if (!raw) {
-    document.getElementById("authLog").textContent = "ユーザーが見つかりません。「新規登録して開始」を押してください。";
+    document.getElementById("authLog").textContent = "ユーザーが見つかりません。「新規登録」を押してください。";
     return;
   }
-  const parsed = JSON.parse(raw);
-  if (parsed.passcode !== pass) {
+  const loaded = JSON.parse(raw);
+  if (loaded.passcode !== pass) {
     document.getElementById("authLog").textContent = "合言葉が違います。";
     return;
   }
   currentUser = name;
-  userData = parsed;
-  enterGame();
+  state = { ...createDefaultState(pass), ...loaded };
+  localStorage.setItem(LAST_USER_KEY, name);
+  startGameSession();
 }
 
-function enterGame() {
-  document.getElementById("authScreen").classList.add("hidden");
-  document.getElementById("gameScreen").classList.remove("hidden");
-  renderAll();
-  drawDino();
+function startGameSession() {
+  currentEnemy = getStageEnemy(state.stage);
+  enemyHp = currentEnemy.maxHp;
+
+  document.getElementById("authCard").classList.add("hidden");
+  document.getElementById("gameArea").classList.remove("hidden");
+  document.getElementById("currentUserLabel").textContent = currentUser;
+  document.getElementById("battleLog").textContent = "自動攻撃中！スライムをタップしてもダメージを与えられます。";
+
+  clearInterval(autoAttackTimer);
+  autoAttackTimer = setInterval(() => {
+    if (state && state.autoDps > 0) {
+      damageEnemy(state.autoDps, "");
+    }
+  }, 1000);
+
+  render();
 }
 
-function logoutUser() {
-  clearInterval(dinoLoop);
-  clearInterval(quizCountdown);
+function logoutPlayer() {
+  clearInterval(autoAttackTimer);
   currentUser = null;
-  userData = null;
-  document.getElementById("gameScreen").classList.add("hidden");
-  document.getElementById("authScreen").classList.remove("hidden");
+  state = null;
+  document.getElementById("gameArea").classList.add("hidden");
+  document.getElementById("authCard").classList.remove("hidden");
   document.getElementById("passcodeInput").value = "";
   document.getElementById("authLog").textContent = "ログアウトしました。";
 }
 
-function renderAll() {
-  if (!userData) return;
-  document.getElementById("dispUser").textContent = currentUser;
-  document.getElementById("dispPts").textContent = userData.pts;
-  document.getElementById("dispPower").textContent = userData.power;
-  document.getElementById("btnPower").textContent = userData.power;
-  document.getElementById("powerLv").textContent = userData.power;
-  document.getElementById("costPower").textContent = userData.powerCost;
+function render() {
+  if (!state) return;
+  document.getElementById("pts").textContent = state.pts;
+  document.getElementById("tapDmg").textContent = state.tapDmg;
+  document.getElementById("tapDmgBtn").textContent = state.tapDmg;
+  document.getElementById("autoDps").textContent = state.autoDps;
+  document.getElementById("costTap").textContent = state.costTap;
+  document.getElementById("costDps").textContent = state.costDps;
 
-  document.getElementById("dispSureWin").textContent = userData.sureWin;
-  document.getElementById("rpsSureWinCount").textContent = userData.sureWin;
-  document.getElementById("dispGyuin").textContent = userData.gyuinUnlocked ? "解放済み" : "未解放";
-  document.getElementById("dispExtraTime").textContent = userData.extraTime;
-  document.getElementById("dispShield").textContent = userData.shieldStock;
+  document.getElementById("stageNum").textContent = state.stage;
+  document.getElementById("enemyName").textContent = currentEnemy.name;
+  document.getElementById("slimeSprite").textContent = currentEnemy.icon;
+  document.getElementById("enemyHp").textContent = Math.max(0, Math.ceil(enemyHp));
+  document.getElementById("enemyMaxHp").textContent = currentEnemy.maxHp;
+  document.getElementById("killCount").textContent = state.kills;
 
-  // ボタン有効/無効
-  document.getElementById("buyPowerBtn").disabled = userData.pts < userData.powerCost;
-  document.getElementById("buySureWinBtn").disabled = userData.pts < 30;
-  document.getElementById("buyGyuinBtn").disabled = userData.gyuinUnlocked || userData.pts < 80;
-  document.getElementById("buyGyuinBtn").textContent = userData.gyuinUnlocked ? "解放済み" : "解放する（80 pt）";
-  document.getElementById("buyTimeBtn").disabled = userData.extraTime >= 10 || userData.pts < 40;
-  document.getElementById("buyShieldBtn").disabled = userData.shieldStock >= 3 || userData.pts < 50;
+  const pct = Math.max(0, Math.min(100, (enemyHp / currentEnemy.maxHp) * 100));
+  document.getElementById("enemyHpBar").style.width = pct + "%";
 
-  // ギュイーンボタン表示
-  const gyuinBtn = document.getElementById("gyuinHandBtn");
-  if (userData.gyuinUnlocked) {
-    gyuinBtn.classList.remove("hidden");
-  } else {
-    gyuinBtn.classList.add("hidden");
-  }
+  document.getElementById("btnTap").disabled = state.pts < state.costTap;
+  document.getElementById("btnDps").disabled = state.pts < state.costDps;
 }
 
-// 1. ナンザンクリッカー
-function clickNanzan() {
-  userData.pts += userData.power;
-  saveUserData();
-}
+function damageEnemy(dmg, sourceLabel) {
+  if (!state) return;
+  enemyHp -= dmg;
+  if (enemyHp <= 0) {
+    state.kills += 1;
+    state.pts += currentEnemy.reward;
+    document.getElementById("battleLog").textContent =
+      `${currentEnemy.name}を撃破！ +${currentEnemy.reward} pt 獲得！`;
 
-function buyItem(type) {
-  if (type === "power" && userData.pts >= userData.powerCost) {
-    userData.pts -= userData.powerCost;
-    userData.power += 1;
-    userData.powerCost = Math.floor(userData.powerCost * 1.5);
-  } else if (type === "sureWin" && userData.pts >= 30) {
-    userData.pts -= 30;
-    userData.sureWin += 1;
-  } else if (type === "gyuin" && !userData.gyuinUnlocked && userData.pts >= 80) {
-    userData.pts -= 80;
-    userData.gyuinUnlocked = true;
-  } else if (type === "extraTime" && userData.extraTime < 10 && userData.pts >= 40) {
-    userData.pts -= 40;
-    userData.extraTime += 1;
-  } else if (type === "shield" && userData.shieldStock < 3 && userData.pts >= 50) {
-    userData.pts -= 50;
-    userData.shieldStock += 1;
-  }
-  saveUserData();
-}
-
-// 2. じゃんけんゲーム
-function playRps(playerHand) {
-  const cpuHands = ["グー", "チョキ", "パー"];
-  let cpuHand = cpuHands[Math.floor(Math.random() * cpuHands.length)];
-  const useTicket = document.getElementById("useSureWinCheck").checked;
-  let result = "";
-
-  if (useTicket && userData.sureWin > 0) {
-    userData.sureWin -= 1;
-    document.getElementById("useSureWinCheck").checked = false;
-    // 必勝チケット発動：相手が負ける手を出す
-    if (playerHand === "グー") cpuHand = "チョキ";
-    else if (playerHand === "チョキ") cpuHand = "パー";
-    else if (playerHand === "パー") cpuHand = "グー";
-    else if (playerHand === "ギュイーン") cpuHand = "グー";
-    result = "win";
-  } else if (playerHand === "ギュイーン") {
-    // ギュイーン判定：グー・チョキに勝ち、パーとはあいこ
-    if (cpuHand === "グー" || cpuHand === "チョキ") result = "win";
-    else result = "draw";
-  } else if (playerHand === cpuHand) {
-    result = "draw";
-  } else if (
-    (playerHand === "グー" && cpuHand === "チョキ") ||
-    (playerHand === "チョキ" && cpuHand === "パー") ||
-    (playerHand === "パー" && cpuHand === "グー")
-  ) {
-    result = "win";
-  } else {
-    result = "lose";
-  }
-
-  let msg = `あなた【${playerHand}】 vs 相手【${cpuHand}】 → `;
-  if (result === "win") {
-    userData.pts += 20;
-    msg += "勝ち！ +20 pt 獲得！";
-  } else if (result === "draw") {
-    msg += "あいこ！（ギュイーンなら負けなし！）";
-  } else {
-    msg += "負け…";
-  }
-
-  document.getElementById("rpsLog").textContent = msg;
-  saveUserData();
-}
-
-// 3. ナンザンダイナソー（単一ジャンプ＋3種サボテン＋サボテン無効シールド＋制限時間延長クイズ）
-const canvas = document.getElementById("dinoCanvas");
-const ctx = canvas.getContext("2d");
-let dinoLoop = null;
-let quizCountdown = null;
-let dino = { x: 28, y: 104, vy: 0, grounded: true, shield: 0 };
-let cactus = { x: 290, w: 12, h: 24, label: "小", speed: 3.6 };
-let dinoScore = 0;
-let isGameOverCooldown = false;
-
-const sampleQuizzes = [
-  { q: "100 − 37 の答えは？", choices: ["63", "73", "67"], ans: "63", exp: "解説：100から30を引いて70、さらに7を引くと63になります。" },
-  { q: "三角形の内角の和は何度？", choices: ["180度", "360度", "90度"], ans: "180度", exp: "解説：どんな三角形でも3つの内角を足すと180度です。" }
-];
-
-function spawnCactus() {
-  const types = [
-    { w: 12, h: 22, label: "小" },
-    { w: 18, h: 32, label: "大" },
-    { w: 34, h: 30, label: "3連大" }
-  ];
-  const t = types[Math.floor(Math.random() * types.length)];
-  cactus.x = 290 + Math.random() * 50;
-  cactus.w = t.w;
-  cactus.h = t.h;
-  cactus.label = t.label;
-}
-
-function jumpDino() {
-  if (isGameOverCooldown) return;
-  if (dino.grounded) {
-    dino.vy = -9.2;
-    dino.grounded = false;
-  }
-}
-
-function startDino() {
-  if (isGameOverCooldown) return;
-  clearInterval(dinoLoop);
-  document.getElementById("quizBox").classList.add("hidden");
-
-  // 所持しているサボテン無効シールドを1個持ち込む（消費）
-  let equippedShield = 0;
-  if (userData.shieldStock > 0) {
-    userData.shieldStock -= 1;
-    equippedShield = 1;
-    saveUserData();
-  }
-
-  dino = { x: 28, y: 104, vy: 0, grounded: true, shield: equippedShield };
-  cactus.speed = 3.6;
-  dinoScore = 0;
-  spawnCactus();
-  document.getElementById("dinoActiveShield").textContent = dino.shield;
-  document.getElementById("dinoLog").textContent = equippedShield > 0 ? "サボテン1回無効シールド装備でスタート！" : "スタート！";
-
-  dinoLoop = setInterval(() => {
-    dino.vy += 0.55;
-    dino.y += dino.vy;
-    if (dino.y >= 104) {
-      dino.y = 104;
-      dino.vy = 0;
-      dino.grounded = true;
+    if (state.kills % 3 === 0) {
+      state.stage += 1;
+      currentEnemy = getStageEnemy(state.stage);
+      document.getElementById("battleLog").textContent += ` ステージ ${state.stage} に突入！`;
+    } else {
+      currentEnemy = getStageEnemy(state.stage);
     }
-
-    cactus.x -= cactus.speed;
-    if (cactus.x < -cactus.w) {
-      dinoScore += 10;
-      cactus.speed = Math.min(6.8, cactus.speed + 0.12);
-      spawnCactus();
-    }
-
-    const cactusTop = 128 - cactus.h;
-    const hit =
-      dino.x < cactus.x + cactus.w &&
-      dino.x + 18 > cactus.x &&
-      dino.y < 128 &&
-      dino.y + 24 > cactusTop;
-
-    if (hit) {
-      if (dino.shield > 0) {
-        dino.shield -= 1;
-        document.getElementById("dinoActiveShield").textContent = dino.shield;
-        document.getElementById("dinoLog").textContent = `シールド発動！「${cactus.label}サボテン」を1回無効化しました！`;
-        spawnCactus();
-      } else {
-        clearInterval(dinoLoop);
-        triggerDinoGameOver();
-      }
-    }
-
-    document.getElementById("dinoScore").textContent = dinoScore;
-    drawDino();
-  }, 20);
+    enemyHp = currentEnemy.maxHp;
+  } else if (sourceLabel) {
+    document.getElementById("battleLog").textContent = `${sourceLabel}で ${dmg} ダメージ！`;
+  }
+  saveUser();
 }
 
-function triggerDinoGameOver() {
-  const earned = Math.floor(dinoScore / 5);
-  userData.pts += earned;
-  saveUserData();
-
-  isGameOverCooldown = true;
-  document.getElementById("dinoStartBtn").disabled = true;
-
-  // 基本10秒 ＋ クリッカーで買った延長秒数
-  let remain = 10 + userData.extraTime;
-  const qObj = sampleQuizzes[Math.floor(Math.random() * sampleQuizzes.length)];
-
-  const quizBox = document.getElementById("quizBox");
-  quizBox.classList.remove("hidden");
-  document.getElementById("quizTimer").textContent = remain;
-  document.getElementById("quizQuestion").textContent = qObj.q;
-  document.getElementById("quizExplain").textContent = "";
-
-  const choicesDiv = document.getElementById("quizChoices");
-  choicesDiv.innerHTML = "";
-  qObj.choices.forEach(c => {
-    const btn = document.createElement("button");
-    btn.textContent = c;
-    btn.onclick = () => {
-      const ok = c === qObj.ans;
-      document.getElementById("quizExplain").textContent = (ok ? "正解！ " : "不正解… ") + qObj.exp;
-    };
-    choicesDiv.appendChild(btn);
-  });
-
-  document.getElementById("dinoLog").textContent = `ゲームオーバー！ +${earned} pt獲得（問題＆解説タイム: ${remain}秒）`;
-
-  clearInterval(quizCountdown);
-  quizCountdown = setInterval(() => {
-    remain -= 1;
-    document.getElementById("quizTimer").textContent = Math.max(0, remain);
-    if (remain <= 0) {
-      clearInterval(quizCountdown);
-      isGameOverCooldown = false;
-      document.getElementById("dinoStartBtn").disabled = false;
-      document.getElementById("dinoLog").textContent = "再スタートできます！";
-    }
-  }, 1000);
+function tapAttack() {
+  if (!state) return;
+  state.pts += state.tapDmg;
+  damageEnemy(state.tapDmg, "タップ攻撃");
 }
 
-function drawDino() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#64748b";
-  ctx.fillRect(0, 128, canvas.width, 2);
+function buyTapUpgrade() {
+  if (!state || state.pts < state.costTap) return;
+  state.pts -= state.costTap;
+  state.tapDmg += 1;
+  state.costTap = Math.floor(state.costTap * 1.45);
+  saveUser();
+}
 
-  // プレイヤー
-  ctx.fillStyle = dino.shield > 0 ? "#0284c7" : "#0f172a";
-  ctx.fillRect(dino.x, dino.y, 18, 24);
+function buyDpsUpgrade() {
+  if (!state || state.pts < state.costDps) return;
+  state.pts -= state.costDps;
+  state.autoDps += 2;
+  state.costDps = Math.floor(state.costDps * 1.45);
+  saveUser();
+}
 
-  // サボテン
-  ctx.fillStyle = "#15803d";
-  ctx.fillRect(cactus.x, 128 - cactus.h, cactus.w, cactus.h);
+// 前回ログインしていたユーザー名を自動入力
+const lastUser = localStorage.getItem(LAST_USER_KEY);
+if (lastUser) {
+  document.getElementById("usernameInput").value = lastUser;
 }
 </script>
 </body>
