@@ -1,0 +1,157 @@
+<script>
+if (sessionStorage.getItem("nanei_login") !== "ok") {
+  location.replace("login.html");
+}
+</script>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>南映ゲームメニュー</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.menu-wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.game-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  border-left: 5px solid #dc2626;
+}
+.game-card.hoi {
+  border-left-color: #2563eb;
+}
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.game-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+}
+.tag {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.15);
+  color: #b91c1c;
+}
+.tag.blue {
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+}
+.game-desc {
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+}
+.play-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+.status-preview {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.06);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>南映ゲームメニュー</h1>
+  <p>遊びたいゲームを選んでスタート！</p>
+</header>
+
+<div class="menu-wrap" id="gameList">
+
+  <!-- 1. ナンザンクリッカー -->
+  <div class="card game-card">
+    <div class="game-header">
+      <h2 class="game-title">ナンザンクリッカー</h2>
+      <span class="tag">鬼畜サバイバル</span>
+    </div>
+    <p class="game-desc">
+      タップ＆自動生産（カーソル・グリコ・ワオキツネザル・南山）でPTを稼ぎ、スライム伝説風バトルと転生に挑むクリッカーゲーム。
+    </p>
+    <div class="status-preview" id="clickerPreview">
+      前回プレイヤー：未プレイ
+    </div>
+    <a href="clicker.html">
+      <button class="play-btn">ナンザンクリッカーを遊ぶ</button>
+    </a>
+  </div>
+
+  <!-- 2. Hearts of Nanzan ～マダガスカル王国の逆襲～ -->
+  <div class="card game-card hoi">
+    <div class="game-header">
+      <h2 class="game-title">Hearts of Nanzan ～マダガスカル王国の逆襲～</h2>
+      <span class="tag blue">HoI4風大戦略</span>
+    </div>
+    <p class="game-desc">
+      国王陣営・内戦陣営の国家方針、特殊樹木兵器研究、イギリス本土陥落＆フランス健在世界線、強大化する外国勢力と戦う大戦略。
+    </p>
+    <div class="status-preview" id="hoiPreview">
+      セーブ状況：未開始
+    </div>
+    <a href="hoi4.html">
+      <button class="play-btn">マダガスカル大戦略を遊ぶ</button>
+    </a>
+  </div>
+
+  <!-- 将来ゲームを追加するときは、この上に同じ <div class="card game-card">...</div> を貼り足すだけでOK -->
+
+  <!-- 会員ページへ戻る -->
+  <div class="card">
+    <a href="menu.html">
+      <button style="width:100%;">会員ページへ戻る</button>
+    </a>
+  </div>
+
+</div>
+
+<script>
+(function loadPreviews() {
+  // クリッカーの前回データ表示
+  const lastUser = localStorage.getItem("nanzanHardcoreLastUser");
+  const clickerEl = document.getElementById("clickerPreview");
+  if (lastUser) {
+    const raw = localStorage.getItem("nanzanHardcoreUser_" + lastUser);
+    if (raw) {
+      const d = JSON.parse(raw);
+      clickerEl.textContent = `前回プレイヤー：${lastUser}（ステージ ${d.stage || 1} ／ 転生 ${d.rebirthCount || 0}回）`;
+    } else {
+      clickerEl.textContent = `前回プレイヤー：${lastUser}`;
+    }
+  }
+
+  // マダガスカル大戦略のセーブ状況表示
+  const hoiEl = document.getElementById("hoiPreview");
+  const hoiRaw = localStorage.getItem("heartsOfNanzanResearchWorldSave_v1");
+  if (hoiRaw) {
+    const h = JSON.parse(hoiRaw);
+    const factionLabel = h.faction === "rebel" ? "内戦陣営" : "国王陣営";
+    const year = Math.floor((h.dayCount || 0) / 365) + 1;
+    const dayOfYear = ((h.dayCount || 0) % 365) + 1;
+    hoiEl.textContent = `進行中：${year}年目 ${dayOfYear}日目 ／ ${factionLabel} ／ 戦力 ${h.armyPower || 120}`;
+  }
+})();
+</script>
+
+</body>
+</html>
