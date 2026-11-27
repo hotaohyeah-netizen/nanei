@@ -12,12 +12,21 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 <link rel="stylesheet" href="style.css">
 <style>
 .hidden { display: none; }
-.vertical-wrap {
-  max-width: 520px;
+.stack-3 {
+  max-width: 540px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+}
+.block-3 {
+  border-top: 4px solid #dc2626;
+}
+.block-3.mid {
+  border-top-color: #2563eb;
+}
+.block-3.right {
+  border-top-color: #16a34a;
 }
 .auth-form {
   display: flex;
@@ -85,6 +94,115 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
   background: #22c55e;
   transition: width 0.15s ease;
 }
+.bar-wave {
+  height: 8px;
+  background: #f59e0b;
+  transition: width 0.2s ease;
+}
+
+/* スライム伝説風 横スクロールバトルステージ */
+.slime-arena {
+  position: relative;
+  margin: 10px 0;
+  padding: 14px 12px 12px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 68%, #14532d 68%, #166534 100%);
+  color: #f8fafc;
+  overflow: hidden;
+  border: 2px solid #334155;
+}
+.slime-arena.boss-stage {
+  background: linear-gradient(180deg, #450a0a 0%, #1c1917 68%, #3f1d1d 68%, #4c1d1d 100%);
+  border-color: #ef4444;
+}
+.arena-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.boss-tag {
+  background: #dc2626;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: bold;
+  font-size: 11px;
+}
+.arena-stage-field {
+  position: relative;
+  height: 92px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 18px 8px;
+}
+.fighter-box {
+  position: relative;
+  text-align: center;
+  transition: transform 0.12s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.fighter-box.lunge-right {
+  transform: translateX(26px) scale(1.08);
+}
+.fighter-box.lunge-left {
+  transform: translateX(-26px) scale(1.08);
+}
+.fighter-box.hit-shake {
+  transform: translateX(10px) rotate(8deg);
+  filter: brightness(1.6);
+}
+.fighter-sprite {
+  font-size: 46px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+.fighter-label {
+  font-size: 11px;
+  margin-top: 3px;
+  background: rgba(15, 23, 42, 0.72);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+.shield-aura {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  background: #38bdf8;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.dmg-popup {
+  position: absolute;
+  top: 6px;
+  right: 26px;
+  font-weight: bold;
+  font-size: 15px;
+  color: #fde047;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.35s ease;
+}
+.dmg-popup.show {
+  opacity: 1;
+  transform: translateY(-10px);
+}
+.dmg-popup.crit {
+  color: #fb7185;
+  font-size: 18px;
+}
+.arena-bars {
+  margin-top: 6px;
+  font-size: 12px;
+}
 .log-box {
   font-size: 13px;
   margin-top: 8px;
@@ -97,10 +215,10 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 
 <header>
   <h1>ナンザンクリッカー</h1>
-  <p>鬼畜難易度サバイバル＆クリッカー</p>
+  <p>縦3ブロック構成・鬼畜サバイバル＆クリッカー</p>
 </header>
 
-<div class="vertical-wrap">
+<div class="stack-3">
 
   <!-- ユーザー名＋合言葉ログイン -->
   <div id="authCard" class="card">
@@ -116,11 +234,13 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
     <div id="authLog" class="log-box">ユーザー名と合言葉を入力してください。</div>
   </div>
 
-  <!-- ゲーム本体（縦型） -->
-  <div id="gameArea" class="hidden" style="display:none; flex-direction:column; gap:14px;">
+  <!-- ゲーム本体（縦3ブロック） -->
+  <div id="gameArea" class="hidden" style="display:none; flex-direction:column; gap:16px;">
 
-    <!-- 1. ユーザー名＆所持ナンザンPT -->
-    <div class="card">
+    <!-- 縦1つ目：PT・クリック・自動生産 -->
+    <div class="card block-3">
+      <h2>① ナンザンPT＆生産（左列枠）</h2>
+
       <div class="row-between">
         <div>
           <div><strong id="dispUser"></strong></div>
@@ -131,29 +251,20 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
       <div style="font-size:12px; margin-top:6px;">
         転生倍率: <strong id="dispRebirthMult">1.00</strong>x（転生回数: <strong id="dispRebirthCount">0</strong>）
       </div>
-    </div>
 
-    <!-- 2. クリックする場所（画像差し替え可） -->
-    <div class="card">
-      <h2>クリック領域</h2>
       <div class="click-zone" onclick="handleManualClick()">
-        <!-- 好きな画像ファイル（例: images/nanzan_click.png）に差し替えてください -->
         <img id="clickTargetImg" src="images/actor.jpg" alt="クリック対象" onerror="this.style.display='none'">
-        <div style="font-weight:bold;">ここをクリック！（+<span id="dispClickGain">1</span> PT / 攻撃）</div>
+        <div style="font-weight:bold;">クリックする場所（+<span id="dispClickGain">1</span> PT / 追撃）</div>
       </div>
       <div id="clickLog" class="log-box">クリックしてPTと追撃ダメージを獲得！</div>
-    </div>
 
-    <!-- 3. 生産施設（カーソル / グリコ / ワオキツネザル / 南山） -->
-    <div class="card">
-      <h2>自動生産施設</h2>
       <div class="item-row">
         <div class="row-between">
           <div>
             <strong>カーソル</strong>（所持: <span id="cntCursor">0</span>）<br>
             <small>コスト: 10PT ／ +1 PT/秒</small>
           </div>
-          <button id="btnCursor" onclick="buyProducer('cursor', 10, 1)">購入</button>
+          <button id="btnCursor" onclick="buyProducer('cursor', 10)">購入</button>
         </div>
       </div>
       <div class="item-row">
@@ -162,7 +273,7 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
             <strong>グリコ</strong>（所持: <span id="cntGlico">0</span>）<br>
             <small>コスト: 100PT ／ +15 PT/秒</small>
           </div>
-          <button id="btnGlico" onclick="buyProducer('glico', 100, 15)">購入</button>
+          <button id="btnGlico" onclick="buyProducer('glico', 100)">購入</button>
         </div>
       </div>
       <div class="item-row">
@@ -171,7 +282,7 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
             <strong>ワオキツネザル</strong>（所持: <span id="cntLemur">0</span>）<br>
             <small>コスト: 100MPT（100,000,000PT） ／ +2,500,000 PT/秒</small>
           </div>
-          <button id="btnLemur" onclick="buyProducer('lemur', 100000000, 2500000)">購入</button>
+          <button id="btnLemur" onclick="buyProducer('lemur', 100000000)">購入</button>
         </div>
       </div>
       <div class="item-row">
@@ -180,32 +291,56 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
             <strong>南山</strong>（所持: <span id="cntNanzan">0</span>）<br>
             <small>コスト: 100BPT（100,000,000,000PT） ／ +5,000,000,000 PT/秒</small>
           </div>
-          <button id="btnNanzan" onclick="buyProducer('nanzan', 100000000000, 5000000000)">購入</button>
+          <button id="btnNanzan" onclick="buyProducer('nanzan', 100000000000)">購入</button>
         </div>
       </div>
     </div>
 
-    <!-- 4. スライム伝説風バトル -->
-    <div class="card">
-      <h2>スライム伝説風バトル（鬼畜）</h2>
-      <div><strong>ステージ <span id="stageNum">1</span></strong> － <span id="enemyName">漆黒スライム</span></div>
-      <div style="font-size:12px;">敵HP: <span id="enemyHp">100</span> / <span id="enemyMaxHp">100</span>（敵攻撃力: <span id="enemyAtk">12</span>）</div>
-      <div class="bar-bg"><div id="enemyHpBar" class="bar-hp" style="width:100%;"></div></div>
+    <!-- 縦2つ目：スライム伝説風バトル＆鬼畜強化 -->
+    <div class="card block-3 mid">
+      <h2>② スライム伝説風バトル＆強化（中央列枠）</h2>
 
-      <div style="font-size:12px; margin-top:8px;">
-        自分HP: <span id="myHp">100</span> / <span id="myMaxHp">100</span> ／
-        シールド: <span id="shieldCount">0</span>/3（シールドHP: <span id="shieldHp">0</span>）
+      <div id="slimeArena" class="slime-arena">
+        <div class="arena-top">
+          <div><strong>STAGE <span id="stageNum">1</span></strong> － <span id="enemyName">漆黒スライム</span></div>
+          <div id="bossBadge" class="boss-tag hidden">BOSS</div>
+        </div>
+
+        <div class="arena-stage-field">
+          <div id="playerFighter" class="fighter-box" onclick="handleManualClick()" title="タップで追撃！">
+            <span id="shieldBadge" class="shield-aura hidden">🛡️x0</span>
+            <div class="fighter-sprite">👑</div>
+            <div class="fighter-label">ナンザン軍</div>
+          </div>
+
+          <div id="dmgPopup" class="dmg-popup">-0</div>
+
+          <div id="enemyFighter" class="fighter-box" onclick="handleManualClick()" title="タップで攻撃！">
+            <div id="enemySprite" class="fighter-sprite">🟢</div>
+            <div class="fighter-label" id="enemyLabel">スライム</div>
+          </div>
+        </div>
+
+        <div class="arena-bars">
+          <div>敵HP: <span id="enemyHp">100</span> / <span id="enemyMaxHp">100</span>（敵ATK: <span id="enemyAtk">12</span>）</div>
+          <div class="bar-bg"><div id="enemyHpBar" class="bar-hp" style="width:100%;"></div></div>
+
+          <div style="margin-top:6px;">
+            自分HP: <span id="myHp">100</span> / <span id="myMaxHp">100</span> ／
+            シールド: <span id="shieldCount">0</span>/3（残盾HP: <span id="shieldHp">0</span>）
+          </div>
+          <div class="bar-bg"><div id="myHpBar" class="bar-player" style="width:100%;"></div></div>
+
+          <div style="margin-top:6px;">
+            次ステージ進行: 撃破 <span id="waveKills">0</span> / 3 体
+          </div>
+          <div class="bar-bg" style="height:8px;"><div id="waveBar" class="bar-wave" style="width:0%;"></div></div>
+        </div>
       </div>
-      <div class="bar-bg"><div id="myHpBar" class="bar-player" style="width:100%;"></div></div>
 
       <div id="battleLog" class="log-box">バトル進行中...</div>
-    </div>
 
-    <!-- 5. ステータス強化（鬼畜コスト・クリティカル率0.01%→5%） -->
-    <div class="card">
-      <h2>ステータス強化</h2>
-
-      <div class="upg-row">
+      <div class="upg-row" style="margin-top:10px;">
         <div class="row-between">
           <div><strong>攻撃力</strong>（Lv.<span id="lvAtk">1</span> / 威力: <span id="valAtk">8</span>）<br><small>必要: <span id="costAtk">40</span> PT</small></div>
           <button id="btnAtk" onclick="upgradeStat('atk')">強化</button>
@@ -235,14 +370,14 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 
       <div class="upg-row">
         <div class="row-between">
-          <div><strong>シールド体力増加</strong>（Lv.<span id="lvShieldHp">1</span> / 体力連動倍率: <span id="valShieldMult">0.30</span>x）<br><small>必要: <span id="costShieldHp">90</span> PT</small></div>
+          <div><strong>シールド体力増加</strong>（Lv.<span id="lvShieldHp">1</span> / 体力連動倍率: <span id="valShieldMult">0.25</span>x）<br><small>必要: <span id="costShieldHp">90</span> PT</small></div>
           <button id="btnShieldHp" onclick="upgradeStat('shieldHp')">強化</button>
         </div>
       </div>
 
       <div class="upg-row">
         <div class="row-between">
-          <div><strong>クリティカル攻撃（倍率）</strong>（Lv.<span id="lvCritDmg">1</span> / <span id="valCritDmg">1.5</span>x）<br><small>必要: <span id="costCritDmg">150</span> PT</small></div>
+          <div><strong>クリティカル攻撃（倍率）</strong>（Lv.<span id="lvCritDmg">1</span> / <span id="valCritDmg">1.50</span>x）<br><small>必要: <span id="costCritDmg">150</span> PT</small></div>
           <button id="btnCritDmg" onclick="upgradeStat('critDmg')">強化</button>
         </div>
       </div>
@@ -255,9 +390,9 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
       </div>
     </div>
 
-    <!-- 6. 提案枠：南山覚醒スキル＆転生システム -->
-    <div class="card">
-      <h2>南山覚醒スキル＆転生（追加提案）</h2>
+    <!-- 縦3つ目：覚醒スキル＆転生 -->
+    <div class="card block-3 right">
+      <h2>③ 覚醒スキル＆転生（右列枠）</h2>
       <p style="font-size:12px;">鬼畜な敵を突破するための切り札です。転生するとPTとステージがリセットされる代わりに永続倍率が増えます。</p>
       <div class="item-row">
         <div class="row-between">
@@ -281,7 +416,7 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
     </div>
 
     <div class="card">
-      <a href="menu.html"><button>会員ページへ戻る</button></a>
+      <a href="game_menu.html"><button style="width:100%;">ゲームメニューへ戻る</button></a>
     </div>
 
   </div>
@@ -298,7 +433,9 @@ let myHp = 100;
 let activeShields = 0;
 let activeShieldHp = 0;
 let skillCooldown = 0;
+let stageKills = 0;
 let tickInterval = null;
+let popupTimeout = null;
 
 function formatNum(n) {
   if (n >= 1e12) return (n / 1e12).toFixed(2) + "T";
@@ -348,7 +485,6 @@ function getCritMultiplier() {
   return Number((1.5 + (data.lvCritDmg - 1) * 0.35).toFixed(2));
 }
 
-// 最初0.01% → 最終5.00%（上がりにくく段階減衰）
 function getCritRatePercent() {
   if (data.lvCritRate <= 0) return 0.01;
   const gained = 4.99 * (1 - Math.exp(-data.lvCritRate * 0.035));
@@ -365,17 +501,70 @@ function getProductionPerSec() {
 }
 
 function makeEnemy(stage) {
-  const names = ["漆黒スライム", "鋼鉄スライム", "呪縛ゴーレム", "狂気ワオキツネ", "魔王南山影"];
-  const maxHp = Math.round(120 * Math.pow(1.55, stage - 1));
-  const atk = Math.round(14 * Math.pow(1.38, stage - 1));
-  const reward = Math.round(25 * Math.pow(1.45, stage - 1) * data.rebirthMult);
+  const isBoss = stage % 5 === 0;
+  const mobTemplates = [
+    { name: "漆黒スライム", icon: "🟢" },
+    { name: "鋼鉄スライム", icon: "⚪" },
+    { name: "呪縛ゴーレム", icon: "🟣" },
+    { name: "狂気ワオキツネ", icon: "🦊" }
+  ];
+  const tpl = isBoss
+    ? { name: "魔王南山影・大スライム", icon: "👑" }
+    : mobTemplates[(stage - 1) % mobTemplates.length];
+
+  const bossMult = isBoss ? 1.8 : 1.0;
+  const maxHp = Math.round(120 * Math.pow(1.55, stage - 1) * bossMult);
+  const atk = Math.round(14 * Math.pow(1.38, stage - 1) * (isBoss ? 1.35 : 1.0));
+  const reward = Math.round(25 * Math.pow(1.45, stage - 1) * data.rebirthMult * bossMult);
+
   return {
-    name: names[(stage - 1) % names.length],
+    name: tpl.name,
+    icon: tpl.icon,
+    isBoss,
     hp: maxHp,
     maxHp,
     atk,
     reward
   };
+}
+
+function triggerAttackAnim(dmg, isCrit) {
+  const pEl = document.getElementById("playerFighter");
+  const eEl = document.getElementById("enemyFighter");
+  const popEl = document.getElementById("dmgPopup");
+
+  pEl.classList.remove("lunge-right");
+  eEl.classList.remove("hit-shake");
+  void pEl.offsetWidth;
+  pEl.classList.add("lunge-right");
+  eEl.classList.add("hit-shake");
+
+  setTimeout(() => {
+    pEl.classList.remove("lunge-right");
+    eEl.classList.remove("hit-shake");
+  }, 150);
+
+  popEl.textContent = (isCrit ? "CRIT! -" : "-") + formatNum(dmg);
+  popEl.classList.toggle("crit", Boolean(isCrit));
+  popEl.classList.add("show");
+  clearTimeout(popupTimeout);
+  popupTimeout = setTimeout(() => {
+    popEl.classList.remove("show");
+  }, 380);
+}
+
+function triggerEnemyLungeAnim() {
+  const eEl = document.getElementById("enemyFighter");
+  const pEl = document.getElementById("playerFighter");
+  eEl.classList.remove("lunge-left");
+  pEl.classList.remove("hit-shake");
+  void eEl.offsetWidth;
+  eEl.classList.add("lunge-left");
+  pEl.classList.add("hit-shake");
+  setTimeout(() => {
+    eEl.classList.remove("lunge-left");
+    pEl.classList.remove("hit-shake");
+  }, 150);
 }
 
 function saveData() {
@@ -416,7 +605,11 @@ function loginPlayer() {
     return;
   }
   currentUser = u;
-  data = { ...createDefaultUser(p), ...parsed, producers: { ...createDefaultUser(p).producers, ...(parsed.producers || {}) } };
+  data = {
+    ...createDefaultUser(p),
+    ...parsed,
+    producers: { ...createDefaultUser(p).producers, ...(parsed.producers || {}) }
+  };
   localStorage.setItem(LAST_KEY, u);
   startGame();
 }
@@ -433,28 +626,25 @@ function startGame() {
   activeShields = data.shieldCount;
   activeShieldHp = activeShields > 0 ? getShieldHpPerUnit() : 0;
   skillCooldown = 0;
+  stageKills = 0;
 
   clearInterval(tickInterval);
   let atkAccumulator = 0;
   tickInterval = setInterval(() => {
     if (!data) return;
 
-    // PT自動生産
     data.pt += getProductionPerSec() * 0.25;
 
-    // 覚醒スキルCD
     if (skillCooldown > 0) {
       skillCooldown = Math.max(0, Number((skillCooldown - 0.25).toFixed(2)));
     }
 
-    // 攻撃頻度に応じた攻撃（0.25秒刻み）
     atkAccumulator += getAttacksPerSec() * 0.25;
     while (atkAccumulator >= 1) {
       atkAccumulator -= 1;
       performPlayerAttack(false);
     }
 
-    // 敵の反撃（1.5秒ペース相当）
     if (Math.random() < 0.16 && enemy && enemy.hp > 0) {
       performEnemyAttack();
     }
@@ -482,20 +672,29 @@ function performPlayerAttack(isManual) {
   if (isManual) dmg = Math.max(1, dmg * 0.6);
 
   enemy.hp -= dmg;
+  triggerAttackAnim(dmg, isCrit);
+
   if (isCrit) {
     document.getElementById("battleLog").textContent = `クリティカル！${formatNum(dmg)} ダメージ！`;
   }
 
   if (enemy.hp <= 0) {
     data.pt += enemy.reward;
-    data.stage += 1;
-    document.getElementById("battleLog").textContent =
-      `${enemy.name}撃破！ +${formatNum(enemy.reward)} PT → ステージ ${data.stage}`;
+    stageKills += 1;
+    let msg = `${enemy.name}撃破！ +${formatNum(enemy.reward)} PT`;
+
+    if (stageKills >= 3) {
+      stageKills = 0;
+      data.stage += 1;
+      msg += ` → STAGE ${data.stage} 突入！`;
+    }
+    document.getElementById("battleLog").textContent = msg;
     enemy = makeEnemy(data.stage);
   }
 }
 
 function performEnemyAttack() {
+  triggerEnemyLungeAnim();
   let incoming = enemy.atk;
   if (activeShields > 0) {
     if (activeShieldHp > incoming) {
@@ -516,6 +715,7 @@ function performEnemyAttack() {
     myHp = getMaxHp();
     activeShields = data.shieldCount;
     activeShieldHp = activeShields > 0 ? getShieldHpPerUnit() : 0;
+    stageKills = 0;
     const penalty = Math.floor(data.pt * 0.15);
     data.pt = Math.max(0, data.pt - penalty);
     document.getElementById("battleLog").textContent =
@@ -532,7 +732,7 @@ function handleManualClick() {
   saveData();
 }
 
-function buyProducer(key, baseCost, inc) {
+function buyProducer(key, baseCost) {
   const owned = data.producers[key];
   const cost = Math.floor(baseCost * Math.pow(1.28, owned));
   if (data.pt < cost) return;
@@ -584,10 +784,15 @@ function useAwakenSkill() {
   enemy.hp -= bigDmg;
   myHp = getMaxHp();
   skillCooldown = 15;
+  triggerAttackAnim(bigDmg, true);
   document.getElementById("extraLog").textContent = `南山一閃！${formatNum(bigDmg)} ダメージ＆HP全回復！`;
   if (enemy.hp <= 0) {
     data.pt += enemy.reward;
-    data.stage += 1;
+    stageKills += 1;
+    if (stageKills >= 3) {
+      stageKills = 0;
+      data.stage += 1;
+    }
     enemy = makeEnemy(data.stage);
   }
   saveData();
@@ -607,6 +812,7 @@ function doRebirth() {
   myHp = getMaxHp();
   activeShields = 0;
   activeShieldHp = 0;
+  stageKills = 0;
   document.getElementById("extraLog").textContent = `王政転生完了！永続倍率 ${data.rebirthMult.toFixed(2)}x`;
   saveData();
 }
@@ -638,8 +844,22 @@ function render() {
   document.getElementById("btnLemur").disabled = data.pt < lCost;
   document.getElementById("btnNanzan").disabled = data.pt < nCost;
 
+  const arenaEl = document.getElementById("slimeArena");
+  arenaEl.classList.toggle("boss-stage", Boolean(enemy.isBoss));
+  document.getElementById("bossBadge").classList.toggle("hidden", !enemy.isBoss);
+
+  const shieldBadge = document.getElementById("shieldBadge");
+  if (activeShields > 0) {
+    shieldBadge.classList.remove("hidden");
+    shieldBadge.textContent = `🛡️x${activeShields}`;
+  } else {
+    shieldBadge.classList.add("hidden");
+  }
+
   document.getElementById("stageNum").textContent = data.stage;
   document.getElementById("enemyName").textContent = enemy.name;
+  document.getElementById("enemySprite").textContent = enemy.icon;
+  document.getElementById("enemyLabel").textContent = enemy.isBoss ? "BOSS" : "ENEMY";
   document.getElementById("enemyHp").textContent = formatNum(Math.max(0, enemy.hp));
   document.getElementById("enemyMaxHp").textContent = formatNum(enemy.maxHp);
   document.getElementById("enemyAtk").textContent = formatNum(enemy.atk);
@@ -650,6 +870,9 @@ function render() {
   document.getElementById("myHpBar").style.width = Math.max(0, Math.min(100, (myHp / maxHp) * 100)) + "%";
   document.getElementById("shieldCount").textContent = activeShields;
   document.getElementById("shieldHp").textContent = formatNum(activeShieldHp);
+
+  document.getElementById("waveKills").textContent = stageKills;
+  document.getElementById("waveBar").style.width = Math.min(100, (stageKills / 3) * 100) + "%";
 
   document.getElementById("lvAtk").textContent = data.lvAtk;
   document.getElementById("valAtk").textContent = formatNum(getAtk());
