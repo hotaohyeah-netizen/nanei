@@ -12,7 +12,7 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 <link rel="stylesheet" href="style.css">
 <style>
 .hoi-wrap {
-  max-width: 1060px;
+  max-width: 1120px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -20,7 +20,7 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 }
 .top-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
   gap: 8px;
   text-align: center;
 }
@@ -37,10 +37,15 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 }
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
   gap: 14px;
 }
-.focus-item, .prov-item, .diplo-item, .res-item {
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+.focus-item, .prov-item, .diplo-item, .res-item, .mod-box {
   border: 1px solid rgba(100, 116, 139, 0.3);
   border-radius: 8px;
   padding: 10px;
@@ -58,29 +63,45 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 }
 .focus-item.king-nf { border-left: 4px solid #b91c1c; }
 .focus-item.rebel-nf { border-left: 4px solid #0284c7; }
-.res-item { border-left: 4px solid #15803d; }
+.focus-item.route-nf { border-left: 4px solid #16a34a; }
 
-/* 世界地図スタイル */
 .world-map-box {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
   border: 2px solid #334155;
-  background: #0b192c;
+  background: #081424;
 }
 .world-map-svg {
   width: 100%;
   height: auto;
   display: block;
 }
+.land-base {
+  fill: #1e293b;
+  stroke: #475569;
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+}
 .map-region {
   cursor: pointer;
-  transition: opacity 0.15s ease, filter 0.15s ease;
-  stroke: #e2e8f0;
-  stroke-width: 1.5;
+  transition: filter 0.15s ease, stroke-width 0.15s ease;
+  stroke: #f8fafc;
+  stroke-width: 1.1;
+  stroke-linejoin: round;
 }
 .map-region:hover {
-  filter: brightness(1.22);
+  filter: brightness(1.25);
+  stroke: #fde047;
+  stroke-width: 2;
+}
+.map-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .map-legend {
   display: flex;
@@ -102,7 +123,6 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
   display: inline-block;
   border: 1px solid rgba(255,255,255,0.4);
 }
-
 .bar-bg {
   width: 100%;
   height: 10px;
@@ -146,217 +166,177 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
   justify-content: center;
   flex-wrap: wrap;
 }
+.tab-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
 </style>
 </head>
 <body>
 
 <header>
   <h1>Hearts of Nanzan ～マダガスカル王国の逆襲～</h1>
-  <p>世界地図・特殊樹木兵器研究・陣営NF・外国軍拡が絡み合う大戦略シミュレーション</p>
+  <p>4陣営・4ルート・陸海空研究＆10ptモジュール・世界地図大戦略</p>
 </header>
 
 <div class="hoi-wrap">
 
-  <!-- 上部ステータスバー -->
+  <!-- 上部ステータス＆陣営・時間操作 -->
   <div class="card">
     <div class="top-bar">
-      <div class="stat-pill">経過日数<strong id="dispDate">1年目 1日目</strong></div>
-      <div class="stat-pill">国際緊張度<strong id="dispTension">15%</strong></div>
-      <div class="stat-pill">操作陣営<strong id="dispFaction">国王陣営</strong></div>
+      <div class="stat-pill">経過ターン<strong id="dispTurn">1</strong></div>
+      <div class="stat-pill">操作陣営<strong id="dispFaction">マダガスカル</strong></div>
+      <div class="stat-pill">マダガスカル路線<strong id="dispRoute">未選択</strong></div>
+      <div class="stat-pill">研究枠<strong id="dispResSlots">0 / 3</strong></div>
       <div class="stat-pill">政治力 (PP)<strong id="dispPP">50</strong></div>
       <div class="stat-pill">安定度<strong id="dispStab">75%</strong></div>
-      <div class="stat-pill">独裁度（護国卿）<strong id="dispDict">15%</strong></div>
-      <div class="stat-pill">工業力<strong id="dispInd">12</strong></div>
+      <div class="stat-pill">工場 / 造船所<strong id="dispFactories">12 / 3</strong></div>
       <div class="stat-pill">人的資源<strong id="dispManpower">15,000</strong></div>
-      <div class="stat-pill">総師団戦力<strong id="dispArmyPower">120</strong></div>
+      <div class="stat-pill">総戦力<strong id="dispArmyPower">130</strong></div>
     </div>
 
-    <div class="speed-btns" style="margin-top:12px;">
-      <button onclick="setSpeed(0)">一時停止 (||)</button>
-      <button onclick="setSpeed(1)">速度1 (通常)</button>
-      <button onclick="setSpeed(2)">速度2 (高速)</button>
-      <button onclick="setSpeed(3)">速度3 (超高速)</button>
-      <button onclick="switchFaction()">陣営切替（国王／内戦）</button>
+    <div class="speed-btns" style="margin-top:10px;">
+      <label style="font-size:12px; display:flex; align-items:center; gap:4px;">
+        陣営選択:
+        <select id="factionSelect" onchange="changeFaction(this.value)">
+          <option value="madagascar">マダガスカル（初期研究枠3）</option>
+          <option value="axis">枢軸：独・日操作（初期研究枠4）</option>
+          <option value="allies">連合国：米・仏操作（初期研究枠5）</option>
+          <option value="comintern">コミンテルン：ソ連操作（初期研究枠4）</option>
+        </select>
+      </label>
+      <button onclick="advanceTurn()">1ターン進める</button>
+      <button onclick="setAutoTurn(0)">自動停止</button>
+      <button onclick="setAutoTurn(1)">自動進行(1x)</button>
+      <button onclick="setAutoTurn(2)">自動進行(2x)</button>
       <button onclick="saveGame()">セーブ</button>
       <button onclick="resetGame()">最初から</button>
     </div>
   </div>
 
-  <!-- 世界地図（ワールドマップ） -->
+  <!-- 精密世界地図 -->
   <div class="card">
-    <h2>世界地図（ワールドマップ＆インド洋・欧州情勢）</h2>
+    <div class="map-controls">
+      <h2 style="margin:0;">世界地図（勢力図＆進軍）</h2>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button onclick="setMapView('world')">世界全体</button>
+        <button onclick="setMapView('indian_ocean')">インド洋・アフリカ拡大</button>
+        <button onclick="setMapView('europe')">欧州戦線拡大</button>
+      </div>
+    </div>
     <p style="font-size:12px; margin-bottom:8px;">
-      地図上の各地域をクリックすると、その地域への進軍（制圧戦）を実行できます。
+      地図上の地域をクリックすると戦況確認・進軍ができます。
     </p>
-
     <div class="world-map-box">
-      <svg id="worldMapSvg" class="world-map-svg" viewBox="0 0 960 440" xmlns="http://www.w3.org/2000/svg">
-        <!-- 緯度・経度グリッド線 -->
-        <g stroke="#1e3a5f" stroke-width="0.8" stroke-dasharray="4 4">
-          <line x1="0" y1="110" x2="960" y2="110" />
-          <line x1="0" y1="220" x2="960" y2="220" />
-          <line x1="0" y1="330" x2="960" y2="330" />
-          <line x1="240" y1="0" x2="240" y2="440" />
-          <line x1="480" y1="0" x2="480" y2="440" />
-          <line x1="720" y1="0" x2="720" y2="440" />
-        </g>
+      <svg id="worldMapSvg" class="world-map-svg" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="oceanGrad" cx="55%" cy="55%" r="70%">
+            <stop offset="0%" stop-color="#0f294a" />
+            <stop offset="100%" stop-color="#06101e" />
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="1000" height="500" fill="url(#oceanGrad)" />
+        <path class="land-base" d="M 65,65 L 115,52 L 175,58 L 235,45 L 285,68 L 270,98 L 295,112 L 265,135 L 245,168 L 218,185 L 205,212 L 222,235 L 195,238 L 165,205 L 145,172 L 132,135 L 95,105 L 62,88 Z" />
+        <path class="land-base" d="M 225,245 L 268,242 L 315,275 L 348,308 L 335,355 L 302,402 L 276,455 L 258,452 L 252,395 L 238,342 L 218,292 Z" />
+        <path class="land-base" d="M 548,88 L 620,62 L 735,54 L 865,64 L 945,82 L 915,112 L 875,118 L 862,155 L 832,188 L 795,205 L 765,195 L 748,218 L 725,212 L 692,226 L 652,195 L 605,176 L 572,162 L 552,132 Z" />
+        <path class="land-base" d="M 795,326 L 848,318 L 888,334 L 896,374 L 862,398 L 812,388 L 788,362 Z" />
 
-        <!-- 背景大陸シルエット（装飾） -->
-        <path d="M 30 70 Q 150 40 230 95 Q 210 170 130 190 Q 50 175 30 70 Z" fill="#172a45" stroke="#26466d" />
-        <path d="M 740 50 Q 910 45 935 150 Q 860 220 760 190 Q 720 120 740 50 Z" fill="#172a45" stroke="#26466d" />
-
-        <!-- 欧州：ドイツ -->
-        <g onclick="handleMapClick('germany')">
-          <polygon id="map-germany" class="map-region" points="455,65 535,62 545,112 462,118" fill="#6d28d9" />
-          <text x="500" y="94" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">ドイツ</text>
-        </g>
-
-        <!-- 欧州：イギリス本土 -->
         <g onclick="handleMapClick('uk_home')">
-          <polygon id="map-uk_home" class="map-region" points="405,52 446,48 450,96 408,100" fill="#2563eb" />
-          <text x="427" y="78" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">英本土</text>
+          <path id="map-uk_home" class="map-region" d="M 476,104 L 486,98 L 491,116 L 494,126 L 478,128 L 481,116 Z" fill="#2563eb" />
+          <text x="482" y="93" fill="#e2e8f0" font-size="9.5" font-weight="bold" text-anchor="middle">英本土</text>
         </g>
-
-        <!-- 欧州：フランス -->
         <g onclick="handleMapClick('france')">
-          <polygon id="map-france" class="map-region" points="415,105 475,102 482,150 412,154" fill="#3b82f6" />
-          <text x="447" y="132" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">フランス</text>
+          <polygon id="map-france" class="map-region" points="482,129 498,127 507,136 503,148 486,149 480,139" fill="#3b82f6" />
+          <text x="493" y="141" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle">仏</text>
         </g>
-
-        <!-- アフリカ北・中央部（周辺諸国） -->
+        <g onclick="handleMapClick('germany')">
+          <polygon id="map-germany" class="map-region" points="505,112 534,110 542,126 528,136 507,135 502,123" fill="#6d28d9" />
+          <text x="522" y="125" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">独</text>
+        </g>
         <g onclick="handleMapClick('other')">
-          <polygon id="map-other" class="map-region" points="410,165 555,165 575,255 445,260 395,215" fill="#d97706" />
-          <text x="485" y="212" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">アフリカ・周辺諸国</text>
+          <polygon id="map-other" class="map-region" points="462,176 518,174 568,184 584,216 616,226 594,258 576,282 548,284 534,318 518,322 512,268 468,262 448,232 452,196" fill="#d97706" />
+          <text x="525" y="232" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">アフリカ諸地域</text>
         </g>
-
-        <!-- 戦線1：北部内戦エリア -->
-        <g id="group-rebel_north" onclick="handleMapClick('rebel_north')" style="display:none;">
-          <ellipse id="map-rebel_north" class="map-region" cx="615" cy="255" rx="34" ry="18" fill="#0284c7" />
-          <text x="615" y="259" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">内戦区</text>
-        </g>
-
-        <!-- 戦線2：マダガスカル本島（王都） -->
-        <g onclick="handleMapClick('madagascar')">
-          <path id="map-madagascar" class="map-region" d="M 605 275 L 635 280 L 622 355 L 592 345 Z" fill="#16a34a" />
-          <text x="613" y="320" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">南山</text>
-        </g>
-
-        <!-- 戦線3：レユニオン・モーリシャス諸島 -->
-        <g onclick="handleMapClick('reunion')">
-          <circle id="map-reunion" class="map-region" cx="665" cy="325" r="16" fill="#3b82f6" />
-          <text x="665" y="352" fill="#e2e8f0" font-size="10" font-weight="bold" text-anchor="middle">レユニオン</text>
-        </g>
-
-        <!-- 戦線4：モザンビーク沿岸 -->
         <g onclick="handleMapClick('mozambique')">
-          <polygon id="map-mozambique" class="map-region" points="525,262 575,262 565,335 518,325" fill="#d97706" />
-          <text x="546" y="298" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">モザンビーク</text>
+          <polygon id="map-mozambique" class="map-region" points="576,282 595,284 588,314 574,344 562,344 564,316 556,304" fill="#d97706" />
+          <text x="556" y="302" fill="#fde68a" font-size="8.5" font-weight="bold" text-anchor="end">モザンビーク</text>
         </g>
-
-        <!-- 戦線5：旧英領セイロン島（インド洋要衝） -->
-        <g onclick="handleMapClick('ceylon')">
-          <polygon id="map-ceylon" class="map-region" points="695,215 735,212 740,255 698,258" fill="#1d4ed8" />
-          <text x="717" y="239" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">セイロン</text>
-        </g>
-
-        <!-- 戦線6：旧英領南アフリカ拠点 -->
         <g onclick="handleMapClick('south_africa')">
-          <polygon id="map-south_africa" class="map-region" points="460,332 565,336 545,402 475,395" fill="#1d4ed8" />
-          <text x="512" y="370" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">南アフリカ</text>
+          <polygon id="map-south_africa" class="map-region" points="524,322 564,320 574,344 562,374 536,382 522,362" fill="#1d4ed8" />
+          <text x="546" y="356" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle">南アフリカ</text>
         </g>
-
-        <!-- 自軍マーカー＆交戦フラッシュ -->
-        <g id="armyMarker" transform="translate(613, 315)" style="pointer-events:none; transition: transform 0.35s ease;">
-          <circle r="11" fill="#fde047" opacity="0.35" />
-          <text y="5" fill="#fde047" font-size="15" font-weight="bold" text-anchor="middle">⚔️</text>
+        <g onclick="handleMapClick('madagascar')">
+          <polygon id="map-madagascar" class="map-region" points="615,294 624,304 618,336 608,354 598,350 601,324 608,302" fill="#16a34a" />
+          <text x="611" y="366" fill="#86efac" font-size="9.5" font-weight="bold" text-anchor="middle">マダガスカル</text>
+        </g>
+        <g onclick="handleMapClick('reunion')">
+          <circle id="map-reunion" class="map-region" cx="639" cy="340" r="6.5" fill="#3b82f6" />
+          <text x="649" y="344" fill="#bfdbfe" font-size="8.5" font-weight="bold" text-anchor="start">レユニオン</text>
+        </g>
+        <g onclick="handleMapClick('ceylon')">
+          <path id="map-ceylon" class="map-region" d="M 702,226 L 708,228 L 710,240 L 703,243 L 699,235 Z" fill="#1d4ed8" />
+          <text x="714" y="238" fill="#bfdbfe" font-size="9" font-weight="bold" text-anchor="start">セイロン</text>
+        </g>
+        <g id="armyMarker" transform="translate(611, 326)" style="pointer-events:none; transition: transform 0.35s ease;">
+          <circle r="9" fill="#fde047" opacity="0.32" />
+          <circle r="3.5" fill="#fde047" />
         </g>
       </svg>
     </div>
-
     <div class="map-legend">
-      <span class="legend-item"><span class="legend-dot" style="background:#16a34a;"></span>マダガスカル王国（自国）</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#16a34a;"></span>マダガスカル</span>
       <span class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span>フランス</span>
       <span class="legend-item"><span class="legend-dot" style="background:#6d28d9;"></span>ドイツ</span>
       <span class="legend-item"><span class="legend-dot" style="background:#1d4ed8;"></span>イギリス／旧英領</span>
       <span class="legend-item"><span class="legend-dot" style="background:#d97706;"></span>周辺諸国</span>
-      <span class="legend-item"><span class="legend-dot" style="background:#0284c7;"></span>内戦勢力</span>
     </div>
-
-    <div id="mapInfoBox" class="log-feed" style="margin-top:10px; max-height:60px;">
+    <div id="mapInfoBox" class="log-feed" style="margin-top:8px; max-height:52px;">
       地図上の地域をクリックすると戦況表示・進軍ができます。
     </div>
   </div>
 
-  <!-- 特殊樹木兵器の研究セクション -->
+  <!-- 工場・造船所建設（1ターン建設数制限） -->
   <div class="card">
-    <h2>特殊樹木兵器研究（マダガスカル固有植物技術）</h2>
-    <div id="activeResearchBox" style="font-size:13px; margin-bottom:10px;">
-      進行中の研究：<strong>なし</strong>
-    </div>
-    <div class="grid-2" id="researchList"></div>
-  </div>
-
-  <div class="grid-2">
-    <!-- 左：国家方針（共通・国王陣営・内戦陣営） -->
-    <div class="card">
-      <h2>国家方針（フォーカスツリー）</h2>
-      <div id="activeFocusBox" style="font-size:13px; margin-bottom:10px;">
-        進行中の方針：<strong>なし</strong>
+    <h2>工場・造船所建設（今ターン残り建設枠: 工場 <strong id="remFactoryBuild">5</strong> / 造船所 <strong id="remDockBuild">2</strong>）</h2>
+    <p style="font-size:12px;">工場は1ターン5個（コミンテルン/ソ連は7個）、造船所は少なめ・占領地（2地域以上制圧）で建設可能です。</p>
+    <div class="grid-2">
+      <div class="prov-item">
+        <strong>民需・軍需工場を建設</strong><br>
+        <small>所持: <span id="cntFactory">12</span> ／ 必要PP: 15</small><br>
+        <button id="btnBuildFactory" onclick="buildFactory()">工場を1つ建設</button>
       </div>
-
-      <h3 style="font-size:14px; margin:10px 0 6px;">【共通ルート：独立と近代化】</h3>
-      <div id="focusCommonList"></div>
-
-      <h3 style="font-size:14px; margin:12px 0 6px;">【国王陣営NF（ナンザン・ヒイラギ王室）】</h3>
-      <div id="focusKingList"></div>
-
-      <h3 style="font-size:14px; margin:12px 0 6px;">【内戦陣営NF（自由キツネザル反乱戦線）】</h3>
-      <div id="focusRebelList"></div>
-    </div>
-
-    <!-- 右：軍備・ディシジョン＆外国勢力 -->
-    <div class="card">
-      <h2>軍備・内政＆外国勢力</h2>
-
-      <h3 style="font-size:15px; margin:8px 0;">師団徴兵・軍備</h3>
-      <div class="diplo-item">
-        <strong>ワオキツネザル突撃歩兵師団</strong>（戦力 +35）<br>
-        <small>必要: 工業力 10 / 人的資源 2,000</small><br>
-        <button id="btnRecruitInf" onclick="recruitUnit('inf')">徴兵・配備</button>
+      <div class="prov-item">
+        <strong>造船所を建設</strong><br>
+        <small>所持: <span id="cntDock">3</span> ／ 必要PP: 20 ／ 条件: 占領地2箇所以上（現在 <span id="cntOwnedProv">1</span> 箇所）</small><br>
+        <button id="btnBuildDock" onclick="buildDock()">造船所を1つ建設</button>
       </div>
-      <div class="diplo-item">
-        <strong>重装甲バオバブ戦車師団</strong>（戦力 +95）<br>
-        <small>必要: 工業力 35 / 人的資源 1,500</small><br>
-        <button id="btnRecruitTank" onclick="recruitUnit('tank')">生産・配備</button>
-      </div>
-
-      <h3 style="font-size:15px; margin:12px 0 8px;">王室・反乱ディシジョン</h3>
-      <div class="diplo-item">
-        <strong>キツネザル国民演説（安定度 +12% / 独裁度 -5%）</strong><br>
-        <small>必要: 政治力 35</small><br>
-        <button id="btnSpeech" onclick="decisionSpeech()">実行</button>
-      </div>
-      <div class="diplo-item">
-        <strong>護国卿令（クロムウェル化・工業力 +8 / 独裁度 +18% / 安定度 -12%）</strong><br>
-        <small>必要: 政治力 40</small><br>
-        <button id="btnCromwell" onclick="decisionCromwell()">発令</button>
-      </div>
-
-      <h3 style="font-size:15px; margin:12px 0 8px;">諸外国の動向（時間経過で軍拡）</h3>
-      <div id="diploList"></div>
     </div>
   </div>
 
-  <!-- 戦線・プロヴィンス支配状況 -->
+  <!-- 陸・海・空 研究ツリー＆10ptモジュール配分 -->
   <div class="card">
-    <h2>インド洋・アフリカ戦線マップ（プロヴィンス制圧）</h2>
-    <p style="font-size:12px;">外国の軍拡に伴い未制圧地域の防衛戦力も上昇します。研究と師団増強で突破しましょう。</p>
-    <div class="grid-2" id="provinceList"></div>
+    <h2>研究ツリー（陸・海・空）＆ 10ポイントモジュール配分</h2>
+    <div class="tab-row">
+      <button onclick="setTechTab('army')">陸軍研究</button>
+      <button onclick="setTechTab('navy')">海軍研究</button>
+      <button onclick="setTechTab('air')">空軍研究</button>
+      <button onclick="setTechTab('modules')">艦艇・航空機モジュール (10pt)</button>
+    </div>
+    <div id="techContent"></div>
   </div>
 
-  <!-- 世界情勢ニュース＆イベントログ -->
+  <!-- 国家方針（NF） -->
   <div class="card">
-    <h2>世界情勢ログ</h2>
+    <h2>国家方針（フォーカスツリー）</h2>
+    <div id="activeFocusBox" style="font-size:13px; margin-bottom:10px;">進行中の方針：<strong>なし</strong></div>
+    <div id="focusList"></div>
+  </div>
+
+  <!-- ログ -->
+  <div class="card">
+    <h2>戦況・情勢ログ</h2>
     <div id="eventLog" class="log-feed"></div>
   </div>
 
@@ -369,308 +349,137 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 </div>
 
 <script>
-const SAVE_KEY = "heartsOfNanzanWorldMapSave_v1";
+const SAVE_KEY = "nanzanHoiPdfRules_v1";
 
-const mapCoords = {
-  madagascar: { x: 613, y: 315 },
-  reunion: { x: 665, y: 325 },
-  mozambique: { x: 546, y: 298 },
-  ceylon: { x: 717, y: 239 },
-  south_africa: { x: 512, y: 370 },
-  rebel_north: { x: 615, y: 255 },
-  france: { x: 447, y: 132 },
-  germany: { x: 500, y: 94 },
-  uk_home: { x: 427, y: 78 },
-  other: { x: 485, y: 212 }
+const FACTION_META = {
+  madagascar: { label: "マダガスカル", slots: 3, buildCap: 5, dockCap: 2, isMadagascar: true },
+  axis: { label: "枢軸（独・日）", slots: 4, buildCap: 5, dockCap: 3, isMadagascar: false },
+  allies: { label: "連合国（米・仏）", slots: 5, buildCap: 5, dockCap: 3, isMadagascar: false },
+  comintern: { label: "コミンテルン（ソ連）", slots: 4, buildCap: 7, dockCap: 1, isMadagascar: false }
 };
 
-const researchDefinitions = [
-  {
-    id: "res_baobab_armor",
-    name: "バオバブ樹液複合装甲",
-    desc: "高密度バオバブ繊維と硬化樹脂を組み合わせた軽量・強靭な特殊装甲。総師団戦力 +75、安定度 +5%。",
-    days: 35,
-    req: null,
-    effect: (s) => {
-      s.armyPower += 75;
-      s.stability = Math.min(100, s.stability + 5);
-      log("【研究完了】バオバブ樹液複合装甲を実用化！戦車・歩兵の防御力が大幅向上。");
-    }
-  },
-  {
-    id: "res_ebony_shell",
-    name: "黒檀・ラフィア焼夷炸裂弾",
-    desc: "マダガスカル産黒檀の破片とラフィア樹脂焼夷剤を用いた特殊砲弾。総師団戦力 +110、工業力 +6。",
-    days: 45,
-    req: "res_baobab_armor",
-    effect: (s) => {
-      s.armyPower += 110;
-      s.industry += 6;
-      log("【研究完了】黒檀・ラフィア焼夷炸裂弾が配備開始！砲撃・突撃威力が急上昇。");
-    }
-  },
-  {
-    id: "res_lemur_elixir",
-    name: "霊木『ナンザン樹』活性樹液兵器",
-    desc: "秘境の特殊樹木から抽出した高純度活性樹液を兵站に投入。総師団戦力 +160、人的資源 +4,000。",
-    days: 60,
-    req: "res_ebony_shell",
-    effect: (s) => {
-      s.armyPower += 160;
-      s.manpower += 4000;
-      log("【研究完了】霊木『ナンザン樹』活性樹液兵器が完成！王国の戦闘力が極限まで高まった。");
-    }
-  }
-];
+const TECH_ITEMS = {
+  army: [
+    { id: "inf1", name: "一型歩兵銃", turns: 4, req: null, dmg: 12, def: 0 },
+    { id: "army_dmg0", name: "歩兵ダメージ増加①", turns: 3, req: "inf1", dmg: 15, def: 0 },
+    { id: "aa1", name: "対空砲1型", turns: 3, req: "army_dmg0", dmg: 10, def: 8 },
+    { id: "aa2", name: "対空砲2型", turns: 4, req: "aa1", dmg: 14, def: 12 },
+    { id: "aa3", name: "対空砲3型", turns: 5, req: "aa2", dmg: 18, def: 16 },
+    { id: "inf2", name: "歩兵銃2型", turns: 4, req: "army_dmg0", dmg: 18, def: 5 },
+    { id: "army_dmg1", name: "歩兵ダメージ増加②", turns: 4, req: "inf2", dmg: 22, def: 0 },
+    { id: "inf3", name: "歩兵銃3型", turns: 5, req: "army_dmg1", dmg: 28, def: 10 },
+    { id: "tank1", name: "戦車1型", turns: 4, req: "inf2", dmg: 24, def: 18 },
+    { id: "tank2", name: "戦車2型", turns: 5, req: "tank1", dmg: 34, def: 26 },
+    { id: "tank3", name: "戦車3型", turns: 6, req: "tank2", dmg: 46, def: 36 },
+    { id: "arty1", name: "野砲1型", turns: 4, req: "inf2", dmg: 22, def: 8 },
+    { id: "arty2", name: "野砲2型", turns: 5, req: "arty1", dmg: 30, def: 12 },
+    { id: "arty3", name: "野砲3型", turns: 6, req: "arty2", dmg: 40, def: 16 },
+    { id: "sup1", name: "支援物資", turns: 3, req: null, dmg: 0, def: 14 },
+    { id: "army_def0", name: "ダメージ軽減①", turns: 3, req: "sup1", dmg: 0, def: 16 },
+    { id: "sup2", name: "支援物資2型", turns: 4, req: "army_def0", dmg: 5, def: 20 },
+    { id: "army_def1", name: "防御力増加", turns: 4, req: "sup2", dmg: 0, def: 24 },
+    { id: "sup3", name: "支援物資3型", turns: 5, req: "army_def1", dmg: 10, def: 30 },
+    { id: "nv1", name: "暗視装置1型", turns: 4, req: "army_def0", dmg: 10, def: 14 },
+    { id: "nv2", name: "暗視装置2型", turns: 5, req: "nv1", dmg: 15, def: 20 },
+    { id: "army_def2", name: "防御力増加（暗視）", turns: 4, req: "nv2", dmg: 0, def: 25 },
+    { id: "para1", name: "空挺兵1型", turns: 4, req: "sup2", dmg: 18, def: 10 },
+    { id: "para2", name: "空挺兵2型", turns: 5, req: "para1", dmg: 26, def: 15 },
+    { id: "para3", name: "空挺兵3型", turns: 6, req: "para2", dmg: 36, def: 22 },
+    { id: "rang1", name: "レンジャー1型", turns: 4, req: "sup2", dmg: 20, def: 14 },
+    { id: "rang2", name: "レンジャー2型", turns: 5, req: "rang1", dmg: 28, def: 20 },
+    { id: "rang3", name: "レンジャー3型", turns: 6, req: "rang2", dmg: 38, def: 26 }
+  ],
+  navy: [
+    { id: "trans", name: "輸送船", turns: 3, req: null, dmg: 0, def: 10 },
+    { id: "sub1", name: "潜水艇1型（独立）", turns: 4, req: null, dmg: 18, def: 12 },
+    { id: "sub2", name: "潜水艇2型（独立）", turns: 5, req: "sub1", dmg: 26, def: 18 },
+    { id: "sub3", name: "潜水艇3型（独立）", turns: 6, req: "sub2", dmg: 36, def: 24 },
+    { id: "mar1", name: "海兵1型", turns: 4, req: "trans", dmg: 18, def: 12 },
+    { id: "mar_dmg1", name: "海兵ダメージ増加①", turns: 3, req: "mar1", dmg: 16, def: 0 },
+    { id: "mar2", name: "海兵2型", turns: 4, req: "mar_dmg1", dmg: 26, def: 18 },
+    { id: "mar_dmg2", name: "海兵ダメージ増加②", turns: 4, req: "mar2", dmg: 22, def: 0 },
+    { id: "mar3", name: "海兵3型", turns: 5, req: "mar_dmg2", dmg: 34, def: 24 },
+    { id: "cv1", name: "空母1型", turns: 5, req: "trans", dmg: 28, def: 20 },
+    { id: "cv2", name: "空母2型", turns: 6, req: "cv1", dmg: 38, def: 28 },
+    { id: "cv3", name: "空母3型", turns: 7, req: "cv2", dmg: 50, def: 36 },
+    { id: "bb1", name: "戦艦1型", turns: 5, req: "trans", dmg: 32, def: 28 },
+    { id: "bb2", name: "戦艦2型", turns: 6, req: "bb1", dmg: 44, def: 38 },
+    { id: "bb3", name: "戦艦3型", turns: 7, req: "bb2", dmg: 58, def: 48 },
+    { id: "ca1", name: "巡洋1型", turns: 4, req: "trans", dmg: 20, def: 16 },
+    { id: "ca2", name: "巡洋2型", turns: 5, req: "ca1", dmg: 28, def: 22 },
+    { id: "ca3", name: "巡洋3型", turns: 6, req: "ca2", dmg: 38, def: 30 },
+    { id: "dd1", name: "駆逐1型", turns: 3, req: "trans", dmg: 14, def: 12 },
+    { id: "dd2", name: "駆逐2型", turns: 4, req: "dd1", dmg: 20, def: 18 },
+    { id: "dd3", name: "駆逐3型", turns: 5, req: "dd2", dmg: 28, def: 24 }
+  ],
+  air: [
+    { id: "cas1", name: "CAS1型", turns: 4, req: null, dmg: 20, def: 10 },
+    { id: "air_dmg1", name: "空軍ダメージ増加①", turns: 3, req: "cas1", dmg: 16, def: 0 },
+    { id: "air_def1", name: "空軍防御増加①", turns: 3, req: "air_dmg1", dmg: 0, def: 16 },
+    { id: "cas2", name: "CAS2型", turns: 4, req: "air_def1", dmg: 28, def: 16 },
+    { id: "cas3", name: "CAS3型", turns: 5, req: "cas2", dmg: 38, def: 22 },
+    { id: "fig1", name: "戦闘機1型", turns: 4, req: null, dmg: 22, def: 14 },
+    { id: "air_dmg2", name: "空軍ダメージ増加②", turns: 3, req: "fig1", dmg: 18, def: 0 },
+    { id: "air_def2", name: "空軍防御増加②", turns: 3, req: "air_dmg2", dmg: 0, def: 18 },
+    { id: "fig2", name: "戦闘機2型", turns: 4, req: "air_def2", dmg: 30, def: 20 },
+    { id: "fig3", name: "戦闘機3型", turns: 5, req: "fig2", dmg: 42, def: 26 }
+  ]
+};
 
-const worldEvents = [
-  {
-    day: 50,
-    id: "france_colonial_pressure",
-    title: "【国際情勢】フランス本国がマダガスカルへの圧力を強化",
-    desc: "健在なフランス共和国がインド洋艦隊を増派し、王国の独立に圧力をかける。",
-    effect: (s) => {
-      s.tension = Math.min(100, s.tension + 12);
-      s.nations.france.power += 75;
-      s.nations.france.status = "植民地回復を画策";
-    }
-  },
-  {
-    day: 130,
-    id: "sealion_launch",
-    title: "【衝撃】ドイツ軍が英本土上陸作戦（アシカ作戦）を発動！",
-    desc: "ドーバー海峡を突破したドイツ軍がブリテン島へ上陸。英本土で激戦が勃発！",
-    effect: (s) => {
-      s.tension = Math.min(100, s.tension + 20);
-      s.nations.germany.power += 120;
-      s.nations.germany.status = "英本土侵攻中";
-      s.nations.uk.status = "本土決戦・危機的状況";
-    }
-  },
-  {
-    day: 210,
-    id: "fall_of_britain",
-    title: "【世界激変】ロンドン陥落・イギリス本土がドイツに降伏！",
-    desc: "大英帝国の中枢が崩壊！インド洋・アフリカの旧英領は本国支援を失う一方、ドイツとフランスは軍拡を加速！",
-    effect: (s) => {
-      s.tension = 100;
-      s.ukFallen = true;
-      s.nations.uk.name = "旧イギリス領残存勢力";
-      s.nations.uk.faction = "本国陥落・崩壊";
-      s.nations.uk.power = 90;
-      s.nations.uk.status = "本国降伏・統治崩壊";
-      s.nations.germany.power += 100;
-      s.nations.germany.status = "欧州覇権確立";
-      s.nations.france.power += 90;
-      s.nations.france.status = "大陸で孤立軍拡中";
-      ["ceylon", "south_africa"].forEach(pid => {
-        const p = s.provinces.find(x => x.id === pid);
-        if (p && p.owner === "uk") {
-          p.enemyPower = Math.max(85, Math.round(p.enemyPower * 0.5));
-        }
-      });
-    }
-  },
-  {
-    day: 340,
-    id: "global_arms_race",
-    title: "【世界軍拡】列強各国の総力戦体制が本格化",
-    desc: "欧州・インド洋の緊張が極限に達し、フランス・ドイツ・周辺諸国が戦力を大幅に引き上げる。",
-    effect: (s) => {
-      s.nations.france.power += 110;
-      s.nations.germany.power += 130;
-      s.nations.other.power += 95;
-      s.nations.france.status = "インド洋死守・総力軍拡";
-    }
-  }
+const NF_LIST = [
+  { id: "nf_escape_fr", side: "madagascar", name: "①フランスからの脱却", turns: 5, req: null, desc: "宗主国のくびきを断ち切る。PP+35。" },
+  { id: "nf_king_rally", side: "madagascar", name: "1,ナンザン王のもとに集う", turns: 5, req: "nf_escape_fr", desc: "王室を中心に結束し戦力+50。" },
+  { id: "nf_king_rebel", side: "madagascar", name: "2,ナンザン王への反抗", turns: 5, req: "nf_escape_fr", desc: "反王室勢力が決起し人的資源+6,000・PP+25。" },
+  { id: "nf_route_allies", side: "madagascar", name: "①連合入り（即英仏植民地割譲）", turns: 6, req: null, desc: "連合陣営へ加入し、旧英仏領の一部を割譲獲得。" },
+  { id: "nf_route_axis", side: "madagascar", name: "②枢軸入り（史実・フランス打倒）", turns: 6, req: null, desc: "枢軸陣営へ加入し、フランス戦力に大打撃＋戦力+70。" },
+  { id: "nf_route_comintern", side: "madagascar", name: "③共産入り（人的資源最高）", turns: 6, req: null, desc: "コミンテルンへ加入し、人的資源+25,000。" },
+  { id: "nf_route_solo", side: "madagascar", name: "④独自路線（世界征服）", turns: 7, req: null, desc: "全勢力と独立路線を貫き、工場+6・戦力+90。" },
+  { id: "nf_hist_major", side: "other", name: "列強総力戦計画（史実NF）", turns: 5, req: null, desc: "各陣営の工業・戦力を増強。" }
 ];
-
-const focusDefinitions = [
-  {
-    id: "ind_1",
-    side: "common",
-    name: "独立宣言と王政復古",
-    desc: "フランス植民地支配からの独立を宣言し、ナンザン・ヒイラギ王政を確立。政治力+60、安定度+10%。",
-    days: 35,
-    req: null,
-    effect: (s) => {
-      s.pp += 60;
-      s.stability = Math.min(100, s.stability + 10);
-      log("【共通NF】マダガスカル王国が独立を宣言！健在なフランス本国との緊張が高まります。");
-    }
-  },
-  {
-    id: "ind_2",
-    side: "common",
-    name: "バオバブ重工業計画",
-    desc: "島の資源と工場を整備し近代化を推進。工業力+15、人的資源+5,000。",
-    days: 45,
-    req: "ind_1",
-    effect: (s) => {
-      s.industry += 15;
-      s.manpower += 5000;
-      log("【共通NF】近代化と重工業化が進行！王国の生産力が向上しました。");
-    }
-  },
-  {
-    id: "king_1",
-    side: "king",
-    name: "王権神授と鉄の粛清",
-    desc: "ナンザン・ヒイラギの親衛隊を強化し反対派を制圧。独裁度+20%、戦力+75、安定度-5%。",
-    days: 40,
-    req: "ind_2",
-    effect: (s) => {
-      s.dictatorship = Math.min(100, s.dictatorship + 20);
-      s.armyPower += 75;
-      s.stability = Math.max(0, s.stability - 5);
-      log("【国王陣営NF】王権神授と鉄の粛清を発動！王室軍が強化されました。");
-    }
-  },
-  {
-    id: "king_2",
-    side: "king",
-    name: "ベルリンとの秘密外交",
-    desc: "イギリスを下したヒトラー政権と極秘協定を締結。戦力+95、独裁度+15%、ドイツ秘密同盟。",
-    days: 50,
-    req: "king_1",
-    effect: (s) => {
-      s.armyPower += 95;
-      s.dictatorship = Math.min(100, s.dictatorship + 15);
-      s.relations.germany = "秘密同盟";
-      log("【国王陣営NF】ベルリンとの秘密外交が成立！極秘の支援と戦力を獲得。");
-    }
-  },
-  {
-    id: "king_3",
-    side: "king",
-    name: "大インド洋覇権の宣言",
-    desc: "崩壊した旧英領の吸収とフランス領駆逐を宣言。工業力+25、政治力+80。",
-    days: 60,
-    req: "king_2",
-    effect: (s) => {
-      s.industry += 25;
-      s.pp += 80;
-      log("【国王陣営NF】大インド洋覇権を宣言！全軍に総進軍命令が下りました。");
-    }
-  },
-  {
-    id: "rebel_1",
-    side: "rebel",
-    name: "自由キツネザル蜂起",
-    desc: "強権体制に反発する勢力が蜂起し義勇兵を集結。人的資源+9,000、戦力+80、安定度+10%。",
-    days: 35,
-    req: "ind_2",
-    effect: (s) => {
-      s.faction = "rebel";
-      s.civilWarTriggered = true;
-      s.manpower += 9000;
-      s.armyPower += 80;
-      s.stability = Math.min(100, s.stability + 10);
-      ensureRebelProvince(s);
-      log("【内戦陣営NF】自由キツネザル蜂起！国内で反乱戦線が決起しました。");
-    }
-  },
-  {
-    id: "rebel_2",
-    side: "rebel",
-    name: "民衆武装と人民工場",
-    desc: "反乱勢力が独自の生産拠点と武装を確保。工業力+20、戦力+75。",
-    days: 45,
-    req: "rebel_1",
-    effect: (s) => {
-      s.industry += 20;
-      s.armyPower += 75;
-      log("【内戦陣営NF】民衆武装と人民工場が稼働！反乱軍の戦力が上昇しました。");
-    }
-  },
-  {
-    id: "rebel_3",
-    side: "rebel",
-    name: "王都進軍（体制転換の決戦）",
-    desc: "王都制圧に向けた総攻勢。戦力+130、政治力+70、独裁度-20%。",
-    days: 55,
-    req: "rebel_2",
-    effect: (s) => {
-      s.armyPower += 130;
-      s.pp += 70;
-      s.dictatorship = Math.max(0, s.dictatorship - 20);
-      log("【内戦陣営NF】王都進軍の総攻勢を開始！");
-    }
-  }
-];
-
-function ensureRebelProvince(s) {
-  if (!s.provinces.some(p => p.id === "rebel_north")) {
-    s.provinces.unshift({
-      id: "rebel_north",
-      name: "北部反乱軍支配区（マダガスカル内戦）",
-      owner: s.faction === "rebel" ? "king_loyalists" : "rebels",
-      enemyPower: Math.max(120, Math.round(s.armyPower * 0.65)),
-      indBonus: 10
-    });
-  }
-}
 
 function defaultState() {
   return {
-    dayCount: 0,
-    tension: 15,
-    ukFallen: false,
+    turn: 1,
+    faction: "madagascar",
+    madagascarRoute: "未選択",
+    activeTechTab: "army",
     activeMarkerId: "madagascar",
-    faction: "king",
     pp: 50,
     stability: 75,
-    dictatorship: 15,
-    industry: 12,
+    factories: 12,
+    docks: 3,
     manpower: 15000,
-    armyPower: 120,
-    completedFocuses: [],
-    completedResearches: [],
-    triggeredEvents: [],
-    currentFocus: null,
-    focusProgress: 0,
-    currentResearch: null,
-    researchProgress: 0,
-    civilWarTriggered: false,
-    nations: {
-      france: { name: "フランス共和国（健存）", faction: "西欧列強・旧宗主国", power: 340, growth: 6, status: "マダガスカル権益維持" },
-      germany: { name: "ドイツ（ベルリン）", faction: "欧州枢軸勢力", power: 390, growth: 8, status: "対英決戦準備" },
-      uk: { name: "イギリス帝国", faction: "インド洋・植民地帝国", power: 350, growth: 4, status: "英本土防衛中" },
-      other: { name: "周辺諸国", faction: "アフリカ・インド洋", power: 210, growth: 4, status: "情勢観望" }
-    },
-    relations: {
-      france: "敵対的",
-      germany: "中立",
-      uk: "警戒",
-      other: "中立"
+    armyPower: 130,
+    builtFactoriesThisTurn: 0,
+    builtDocksThisTurn: 0,
+    completedTechs: ["inf1", "sup1", "trans", "cas1", "fig1"],
+    activeResearch: [],
+    completedNFs: [],
+    currentNF: null,
+    nfProgress: 0,
+    modules: {
+      navy: { atk: 4, def: 3, cost: 3 },
+      air: { atk: 4, def: 3, cost: 3 }
     },
     provinces: [
-      { id: "madagascar", name: "マダガスカル本島（王都）", owner: "nanzan", enemyPower: 0, indBonus: 10 },
-      { id: "reunion", name: "仏領レユニオン・周辺諸島", owner: "france", enemyPower: 180, indBonus: 10 },
-      { id: "mozambique", name: "モザンビーク沿岸", owner: "other", enemyPower: 220, indBonus: 14 },
-      { id: "ceylon", name: "旧英領セイロン島（インド洋要衝）", owner: "uk", enemyPower: 340, indBonus: 22 },
-      { id: "south_africa", name: "旧英領南アフリカ拠点", owner: "uk", enemyPower: 480, indBonus: 35 }
+      { id: "madagascar", name: "マダガスカル本島", owner: "madagascar", enemyPower: 0, indBonus: 3 },
+      { id: "reunion", name: "レユニオン諸島", owner: "france", enemyPower: 120, indBonus: 2 },
+      { id: "mozambique", name: "モザンビーク沿岸", owner: "other", enemyPower: 150, indBonus: 3 },
+      { id: "ceylon", name: "セイロン島", owner: "uk", enemyPower: 180, indBonus: 4 },
+      { id: "south_africa", name: "南アフリカ", owner: "uk", enemyPower: 220, indBonus: 5 }
     ],
-    logs: ["[1年目 1日目] マダガスカル王国の物語が開幕。ドイツによるイギリス本土攻略の影と、健在なフランスとの対立が交錯する。"]
+    logs: ["ターン1開始。陣営・研究・10ptモジュール・国家方針を選んで戦線を動かしましょう。"]
   };
 }
 
 let state = loadState();
-let speed = 1;
-let timer = null;
+let autoTimer = null;
 
 function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return defaultState();
-    const def = defaultState();
-    const parsed = JSON.parse(raw);
-    return {
-      ...def,
-      ...parsed,
-      nations: { ...def.nations, ...(parsed.nations || {}) },
-      relations: { ...def.relations, ...(parsed.relations || {}) }
-    };
+    return { ...defaultState(), ...JSON.parse(raw) };
   } catch (e) {
     return defaultState();
   }
@@ -678,7 +487,7 @@ function loadState() {
 
 function saveGame() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-  log("ゲームデータを保存しました。");
+  log("セーブしました。");
   render();
 }
 
@@ -688,415 +497,358 @@ function resetGame() {
   render();
 }
 
-function switchFaction() {
-  state.faction = state.faction === "king" ? "rebel" : "king";
-  log(`操作陣営を「${state.faction === "king" ? "国王陣営" : "内戦陣営"}」に切り替えました。`);
-  render();
-}
-
 function log(msg) {
-  const dateStr = formatDate(state.dayCount);
-  state.logs.unshift(`[${dateStr}] ${msg}`);
-  if (state.logs.length > 70) state.logs.pop();
+  state.logs.unshift(`[T${state.turn}] ${msg}`);
+  if (state.logs.length > 80) state.logs.pop();
 }
 
-function formatDate(days) {
-  const year = Math.floor(days / 365) + 1;
-  const dayOfYear = (days % 365) + 1;
-  return `${year}年目 ${dayOfYear}日目`;
-}
-
-function setSpeed(s) {
-  speed = s;
-  clearInterval(timer);
-  if (speed === 0) return;
-  const ms = speed === 1 ? 850 : speed === 2 ? 400 : 160;
-  timer = setInterval(advanceDay, ms);
-}
-
-function growForeignPowers() {
-  const tensionFactor = 1 + state.tension / 120;
-  Object.keys(state.nations).forEach(code => {
-    const n = state.nations[code];
-    const inc = Math.max(2, Math.round(n.growth * tensionFactor));
-    n.power += inc;
-  });
-
-  state.provinces.forEach(p => {
-    if (p.owner !== "nanzan") {
-      const ownerGrowth = state.nations[p.owner]?.growth || 3;
-      p.enemyPower += Math.max(2, Math.round(ownerGrowth * 0.75 * tensionFactor));
-    }
-  });
-}
-
-function advanceDay() {
-  state.dayCount += 1;
-
-  worldEvents.forEach(ev => {
-    if (state.dayCount >= ev.day && !state.triggeredEvents.includes(ev.id)) {
-      state.triggeredEvents.push(ev.id);
-      ev.effect(state);
-      log(`${ev.title} － ${ev.desc}`);
-    }
-  });
-
-  const ppGain = 1.2 + (state.stability / 100) * 0.8;
-  state.pp = Number((state.pp + ppGain).toFixed(1));
-  state.manpower += Math.round(35 + state.industry * 1.5);
-
-  if (state.currentFocus) {
-    const f = focusDefinitions.find(x => x.id === state.currentFocus);
-    if (f) {
-      state.focusProgress += 1;
-      if (state.focusProgress >= f.days) {
-        state.completedFocuses.push(f.id);
-        state.currentFocus = null;
-        state.focusProgress = 0;
-        f.effect(state);
-      }
-    }
+function changeFaction(f) {
+  state.faction = f;
+  const meta = FACTION_META[f];
+  if (f === "comintern") {
+    state.factories = Math.max(state.factories, 16);
+    state.docks = Math.min(state.docks, 2);
+  } else if (f === "axis") {
+    state.factories = Math.max(state.factories, 15);
   }
-
-  if (state.currentResearch) {
-    const r = researchDefinitions.find(x => x.id === state.currentResearch);
-    if (r) {
-      state.researchProgress += 1;
-      if (state.researchProgress >= r.days) {
-        state.completedResearches.push(r.id);
-        state.currentResearch = null;
-        state.researchProgress = 0;
-        r.effect(state);
-      }
-    }
+  while (state.activeResearch.length > meta.slots) {
+    state.activeResearch.pop();
   }
-
-  if (state.dayCount % 15 === 0) {
-    growForeignPowers();
-  }
-
-  if (state.dayCount % 30 === 0) {
-    if (state.dictatorship >= 60) {
-      state.stability = Math.max(0, state.stability - 4);
-      log("【国内情勢】強権的なクロムウェル化に対し、反対派の不満が高まっています。");
-    }
-    state.armyPower += Math.floor(state.industry * 0.25);
-    log("【世界軍拡】各国の軍備増強が進行し、戦線の防衛力も上昇しています。");
-  }
-
-  if (!state.civilWarTriggered && state.stability < 20 && state.dictatorship >= 70) {
-    state.civilWarTriggered = true;
-    state.armyPower = Math.max(40, state.armyPower - Math.round(state.armyPower * 0.35));
-    ensureRebelProvince(state);
-    log("【緊急事態】マダガスカル大内戦勃発！国王陣営NFと内戦陣営NFの双方が激突します！");
-  }
-
+  log(`操作陣営を「${meta.label}」（初期研究枠 ${meta.slots}）に変更しました。`);
   render();
+}
+
+function setAutoTurn(mode) {
+  clearInterval(autoTimer);
+  if (mode === 0) return;
+  autoTimer = setInterval(advanceTurn, mode === 1 ? 1100 : 450);
+}
+
+function setTechTab(tab) {
+  state.activeTechTab = tab;
+  render();
+}
+
+function setMapView(mode) {
+  const svg = document.getElementById("worldMapSvg");
+  if (!svg) return;
+  if (mode === "indian_ocean") svg.setAttribute("viewBox", "440 190 340 220");
+  else if (mode === "europe") svg.setAttribute("viewBox", "430 65 180 120");
+  else svg.setAttribute("viewBox", "0 0 1000 500");
 }
 
 function handleMapClick(regionId) {
   state.activeMarkerId = regionId;
   const prov = state.provinces.find(p => p.id === regionId);
   if (prov) {
-    if (prov.owner === "nanzan") {
-      document.getElementById("mapInfoBox").textContent =
-        `【${prov.name}】マダガスカル王国が制圧済み（工業ボーナス +${prov.indBonus}）。`;
+    if (prov.owner === "madagascar") {
+      document.getElementById("mapInfoBox").textContent = `${prov.name}：マダガスカル支配下（工場ボーナス +${prov.indBonus}）。`;
     } else {
       attackProvince(prov.id);
     }
     render();
     return;
   }
-
-  const labelMap = {
-    germany: `ドイツ（${state.nations.germany.status}／推定戦力 ${state.nations.germany.power}）`,
-    uk_home: state.ukFallen
-      ? "イギリス本土：ドイツ軍により制圧・降伏済み"
-      : `イギリス本土（${state.nations.uk.status}／推定戦力 ${state.nations.uk.power}）`,
-    france: `フランス（${state.nations.france.status}／推定戦力 ${state.nations.france.power}）`,
-    other: `周辺諸国（${state.nations.other.status}／推定戦力 ${state.nations.other.power}）`
-  };
-  document.getElementById("mapInfoBox").textContent = labelMap[regionId] || "地域を選択しました。";
+  document.getElementById("mapInfoBox").textContent = `${regionId} を選択しました。`;
   render();
 }
 
-function startResearch(id) {
-  if (state.currentResearch || state.completedResearches.includes(id)) return;
-  const r = researchDefinitions.find(x => x.id === id);
-  if (!r) return;
-  if (r.req && !state.completedResearches.includes(r.req)) return;
-  state.currentResearch = id;
-  state.researchProgress = 0;
-  log(`特殊樹木兵器の研究「${r.name}」を開始しました。`);
+function buildFactory() {
+  const cap = FACTION_META[state.faction].buildCap;
+  if (state.builtFactoriesThisTurn >= cap || state.pp < 15) return;
+  state.pp -= 15;
+  state.factories += 1;
+  state.builtFactoriesThisTurn += 1;
+  state.armyPower += 8;
+  log(`工場を1つ建設（今ターン ${state.builtFactoriesThisTurn}/${cap}）。`);
   render();
 }
 
-function startFocus(id) {
-  if (state.currentFocus || state.completedFocuses.includes(id)) return;
-  const f = focusDefinitions.find(x => x.id === id);
-  if (!f) return;
-  if (f.req && !state.completedFocuses.includes(f.req)) return;
-  state.currentFocus = id;
-  state.focusProgress = 0;
-  log(`国家方針「${f.name}」に着手しました。`);
+function buildDock() {
+  const cap = FACTION_META[state.faction].dockCap;
+  const ownedCount = state.provinces.filter(p => p.owner === "madagascar").length;
+  if (state.builtDocksThisTurn >= cap || state.pp < 20 || ownedCount < 2) return;
+  state.pp -= 20;
+  state.docks += 1;
+  state.builtDocksThisTurn += 1;
+  state.armyPower += 10;
+  log(`造船所を1つ建設（今ターン ${state.builtDocksThisTurn}/${cap}）。`);
   render();
 }
 
-function recruitUnit(type) {
-  if (type === "inf") {
-    if (state.industry < 10 || state.manpower < 2000) return;
-    state.industry -= 4;
-    state.manpower -= 2000;
+function getAllTechs() {
+  return [...TECH_ITEMS.army, ...TECH_ITEMS.navy, ...TECH_ITEMS.air];
+}
+
+function startTech(id) {
+  const slots = FACTION_META[state.faction].slots;
+  if (state.activeResearch.length >= slots) return;
+  if (state.completedTechs.includes(id) || state.activeResearch.some(r => r.id === id)) return;
+  const tech = getAllTechs().find(t => t.id === id);
+  if (!tech) return;
+  if (tech.req && !state.completedTechs.includes(tech.req)) return;
+  state.activeResearch.push({ id: tech.id, progress: 0 });
+  log(`研究開始：${tech.name}`);
+  render();
+}
+
+function adjustMod(group, stat, delta) {
+  const m = state.modules[group];
+  const nextVal = m[stat] + delta;
+  if (nextVal < 0 || nextVal > 7) return;
+  const sum = m.atk + m.def + m.cost + delta;
+  if (sum < 0 || sum > 10) return;
+  m[stat] = nextVal;
+  render();
+}
+
+function startNF(id) {
+  if (state.currentNF || state.completedNFs.includes(id)) return;
+  const nf = NF_LIST.find(n => n.id === id);
+  if (!nf) return;
+  if (nf.req && !state.completedNFs.includes(nf.req)) return;
+  state.currentNF = id;
+  state.nfProgress = 0;
+  log(`国家方針着手：${nf.name}`);
+  render();
+}
+
+function applyNFEffect(nf) {
+  if (nf.id === "nf_escape_fr") {
+    state.pp += 35;
+  } else if (nf.id === "nf_king_rally") {
+    state.armyPower += 50;
+  } else if (nf.id === "nf_king_rebel") {
+    state.manpower += 6000;
+    state.pp += 25;
+  } else if (nf.id === "nf_route_allies") {
+    state.madagascarRoute = "①連合入り";
+    ["ceylon", "reunion"].forEach(pid => {
+      const p = state.provinces.find(x => x.id === pid);
+      if (p) { p.owner = "madagascar"; p.enemyPower = 0; }
+    });
+  } else if (nf.id === "nf_route_axis") {
+    state.madagascarRoute = "②枢軸入り";
+    state.armyPower += 70;
+    const fr = state.provinces.find(x => x.id === "reunion");
+    if (fr) fr.enemyPower = Math.max(40, Math.round(fr.enemyPower * 0.5));
+  } else if (nf.id === "nf_route_comintern") {
+    state.madagascarRoute = "③共産入り";
+    state.manpower += 25000;
+  } else if (nf.id === "nf_route_solo") {
+    state.madagascarRoute = "④独自路線";
+    state.factories += 6;
+    state.armyPower += 90;
+  } else {
+    state.factories += 3;
     state.armyPower += 35;
-    log("ワオキツネザル突撃歩兵師団を戦線に配備！（戦力 +35）");
-  } else if (type === "tank") {
-    if (state.industry < 35 || state.manpower < 1500) return;
-    state.industry -= 12;
-    state.manpower -= 1500;
-    state.armyPower += 95;
-    log("重装甲バオバブ戦車師団を配備！（戦力 +95）");
   }
-  render();
-}
-
-function decisionSpeech() {
-  if (state.pp < 35) return;
-  state.pp -= 35;
-  state.stability = Math.min(100, state.stability + 12);
-  state.dictatorship = Math.max(0, state.dictatorship - 5);
-  log("演説により支持が回復しました。（安定度 +12%）");
-  render();
-}
-
-function decisionCromwell() {
-  if (state.pp < 40) return;
-  state.pp -= 40;
-  state.industry += 8;
-  state.dictatorship = Math.min(100, state.dictatorship + 18);
-  state.stability = Math.max(0, state.stability - 12);
-  log("護国卿令を発令！工業力が上昇する一方、国内緊張が高まりました。");
-  render();
-}
-
-function diploAction(country, action) {
-  if (state.pp < 30) return;
-  state.pp -= 30;
-  const nName = state.nations[country]?.name || countryName(country);
-  if (action === "trade") {
-    state.industry += 5;
-    state.relations[country] = "秘密通商";
-    log(`${nName}と通商協定を締結（工業力 +5）。`);
-  } else if (action === "lendlease") {
-    state.armyPower += 40;
-    state.relations[country] = "武器供与中";
-    log(`${nName}から武器供与を受領（戦力 +40）。`);
-  } else if (action === "war") {
-    state.relations[country] = "交戦中";
-    state.tension = Math.min(100, state.tension + 10);
-    log(`【宣戦布告】${nName}に宣戦を布告！`);
-  }
-  render();
-}
-
-function countryName(code) {
-  if (state.nations[code]) return state.nations[code].name;
-  return {
-    rebels: "内戦反乱軍",
-    king_loyalists: "王室護国軍"
-  }[code] || code;
+  log(`国家方針完了：${nf.name}`);
 }
 
 function attackProvince(provId) {
   const p = state.provinces.find(x => x.id === provId);
-  if (!p || p.owner === "nanzan") return;
-
+  if (!p || p.owner === "madagascar") return;
   state.activeMarkerId = provId;
-
-  if (!["rebels", "king_loyalists"].includes(p.owner) && state.relations[p.owner] !== "交戦中") {
-    state.relations[p.owner] = "交戦中";
-    state.tension = Math.min(100, state.tension + 8);
-    log(`${countryName(p.owner)}との武力衝突に突入！`);
-  }
-
-  if (state.armyPower > p.enemyPower) {
-    const loss = Math.round(p.enemyPower * 0.25);
-    state.armyPower = Math.max(20, state.armyPower - loss);
-    p.owner = "nanzan";
+  if (state.armyPower >= p.enemyPower) {
+    state.armyPower = Math.max(30, state.armyPower - Math.round(p.enemyPower * 0.2));
+    p.owner = "madagascar";
     p.enemyPower = 0;
-    state.industry += p.indBonus;
-    const msg = `【勝利】${p.name}を制圧！工業力 +${p.indBonus} を獲得！`;
+    state.factories += p.indBonus;
+    const msg = `${p.name}を制圧！工場 +${p.indBonus}。`;
     log(msg);
     document.getElementById("mapInfoBox").textContent = msg;
   } else {
-    const loss = Math.round(state.armyPower * 0.2);
-    state.armyPower = Math.max(10, state.armyPower - loss);
-    p.enemyPower = Math.max(20, p.enemyPower - Math.round(state.armyPower * 0.4));
-    const msg = `【苦戦】${p.name}への強襲は撃退されました（残存敵戦力: ${p.enemyPower}）。`;
+    state.armyPower = Math.max(20, state.armyPower - Math.round(state.armyPower * 0.15));
+    p.enemyPower = Math.max(20, p.enemyPower - Math.round(state.armyPower * 0.35));
+    const msg = `${p.name}への進軍は交戦継続（残存防衛 ${p.enemyPower}）。`;
     log(msg);
     document.getElementById("mapInfoBox").textContent = msg;
   }
   render();
 }
 
-function renderWorldMap() {
-  const ownerColors = {
-    nanzan: "#16a34a",
-    france: "#3b82f6",
-    germany: "#6d28d9",
-    uk: "#1d4ed8",
-    other: "#d97706",
-    rebels: "#0284c7",
-    king_loyalists: "#f97316"
-  };
+function advanceTurn() {
+  state.turn += 1;
+  state.pp = Number((state.pp + 8).toFixed(1));
+  state.manpower += 400 + state.factories * 25;
+  state.builtFactoriesThisTurn = 0;
+  state.builtDocksThisTurn = 0;
+
+  const doneRes = [];
+  state.activeResearch.forEach(item => {
+    const tech = getAllTechs().find(t => t.id === item.id);
+    if (!tech) return;
+    item.progress += 1;
+    if (item.progress >= tech.turns) {
+      state.completedTechs.push(tech.id);
+      state.armyPower += tech.dmg + tech.def;
+      doneRes.push(item.id);
+      log(`研究完了：${tech.name}（戦力 +${tech.dmg + tech.def}）`);
+    }
+  });
+  state.activeResearch = state.activeResearch.filter(x => !doneRes.includes(x.id));
+
+  if (state.currentNF) {
+    const nf = NF_LIST.find(n => n.id === state.currentNF);
+    if (nf) {
+      state.nfProgress += 1;
+      if (state.nfProgress >= nf.turns) {
+        state.completedNFs.push(nf.id);
+        const doneNf = nf;
+        state.currentNF = null;
+        state.nfProgress = 0;
+        applyNFEffect(doneNf);
+      }
+    }
+  }
 
   state.provinces.forEach(p => {
-    const el = document.getElementById("map-" + p.id);
-    if (el) {
-      el.setAttribute("fill", ownerColors[p.owner] || "#64748b");
+    if (p.owner !== "madagascar") {
+      p.enemyPower += 5;
     }
   });
 
-  const rebelGroup = document.getElementById("group-rebel_north");
-  if (rebelGroup) {
-    rebelGroup.style.display = state.provinces.some(p => p.id === "rebel_north") ? "inline" : "none";
-  }
+  render();
+}
 
-  const ukHomeEl = document.getElementById("map-uk_home");
-  if (ukHomeEl) {
-    ukHomeEl.setAttribute("fill", state.ukFallen ? "#6d28d9" : "#2563eb");
-  }
-
-  const coord = mapCoords[state.activeMarkerId] || mapCoords.madagascar;
+function renderWorldMap() {
+  const colors = {
+    madagascar: "#16a34a",
+    france: "#3b82f6",
+    germany: "#6d28d9",
+    uk: "#1d4ed8",
+    other: "#d97706"
+  };
+  state.provinces.forEach(p => {
+    const el = document.getElementById("map-" + p.id);
+    if (el) el.setAttribute("fill", colors[p.owner] || "#64748b");
+  });
+  const coords = {
+    madagascar: [611, 326],
+    reunion: [639, 340],
+    mozambique: [578, 308],
+    ceylon: [704, 234],
+    south_africa: [548, 352],
+    france: [493, 138],
+    germany: [522, 122],
+    uk_home: [482, 114],
+    other: [525, 232]
+  };
+  const [x, y] = coords[state.activeMarkerId] || coords.madagascar;
   const marker = document.getElementById("armyMarker");
-  if (marker) {
-    marker.setAttribute("transform", `translate(${coord.x}, ${coord.y})`);
-  }
+  if (marker) marker.setAttribute("transform", `translate(${x}, ${y})`);
 }
 
-function renderResearchList() {
-  const activeBox = document.getElementById("activeResearchBox");
-  if (state.currentResearch) {
-    const ar = researchDefinitions.find(x => x.id === state.currentResearch);
-    const pct = Math.min(100, Math.round((state.researchProgress / ar.days) * 100));
-    activeBox.innerHTML = `進行中の研究：<strong>${ar.name}</strong>（${state.researchProgress}/${ar.days}日）
-      <div class="bar-bg"><div class="bar-fill research" style="width:${pct}%"></div></div>`;
+function renderTechArea() {
+  const container = document.getElementById("techContent");
+  const slots = FACTION_META[state.faction].slots;
+
+  if (state.activeTechTab === "modules") {
+    container.innerHTML = ["navy", "air"].map(group => {
+      const m = state.modules[group];
+      const used = m.atk + m.def + m.cost;
+      const title = group === "navy" ? "海軍・潜水艇モジュール（10pt配分・各最大7）" : "空軍モジュール（10pt配分・各最大7）";
+      return `
+        <div class="mod-box">
+          <strong>${title}</strong>（配分済: <strong>${used} / 10</strong>）<br>
+          <div style="margin-top:6px;">
+            攻撃: <strong>${m.atk}</strong>/7
+            <button onclick="adjustMod('${group}','atk',-1)">-</button>
+            <button onclick="adjustMod('${group}','atk',1)">+</button>
+            ／ 防御: <strong>${m.def}</strong>/7
+            <button onclick="adjustMod('${group}','def',-1)">-</button>
+            <button onclick="adjustMod('${group}','def',1)">+</button>
+            ／ コスト減少: <strong>${m.cost}</strong>/7
+            <button onclick="adjustMod('${group}','cost',-1)">-</button>
+            <button onclick="adjustMod('${group}','cost',1)">+</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+    return;
+  }
+
+  const list = TECH_ITEMS[state.activeTechTab] || [];
+  container.innerHTML = `
+    <div style="font-size:12px; margin-bottom:8px;">研究枠使用中：<strong>${state.activeResearch.length} / ${slots}</strong></div>
+    <div class="grid-3">
+      ${list.map(t => {
+        const done = state.completedTechs.includes(t.id);
+        const active = state.activeResearch.find(r => r.id === t.id);
+        const reqOk = !t.req || state.completedTechs.includes(t.req);
+        const label = state.faction === "madagascar" ? t.name.replace("歩兵銃", "南山銃").replace("戦車", "バオバブ戦車") : t.name;
+        return `
+          <div class="res-item ${done ? "done" : active ? "active" : ""}">
+            <strong>${label}</strong> <small>(${t.turns}ターン)</small><br>
+            <small>攻撃+${t.dmg} / 防御+${t.def}</small><br>
+            ${done ? '<span class="badge ally">完了</span>' :
+              active ? `<span class="badge">進行中 (${active.progress}/${t.turns})</span>` :
+              `<button ${(!reqOk || state.activeResearch.length >= slots) ? "disabled" : ""} onclick="startTech('${t.id}')">${reqOk ? "研究開始" : "前提未完了"}</button>`}
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderNF() {
+  const box = document.getElementById("activeFocusBox");
+  if (state.currentNF) {
+    const cur = NF_LIST.find(n => n.id === state.currentNF);
+    const pct = Math.min(100, Math.round((state.nfProgress / cur.turns) * 100));
+    box.innerHTML = `進行中：<strong>${cur.name}</strong>（${state.nfProgress}/${cur.turns}ターン）<div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>`;
   } else {
-    activeBox.innerHTML = `進行中の研究：<strong>なし（下から研究を選択してください）</strong>`;
+    box.innerHTML = `進行中の方針：<strong>なし</strong>`;
   }
 
-  const container = document.getElementById("researchList");
-  container.innerHTML = "";
-  researchDefinitions.forEach(r => {
-    const isDone = state.completedResearches.includes(r.id);
-    const isActive = state.currentResearch === r.id;
-    const reqOk = !r.req || state.completedResearches.includes(r.req);
-
-    const div = document.createElement("div");
-    div.className = "res-item" + (isDone ? " done" : isActive ? " active" : "");
-    div.innerHTML = `
-      <strong>${r.name}</strong> <small>(研究期間: ${r.days}日)</small><br>
-      <small>${r.desc}</small><br>
-      ${isDone ? '<span class="badge ally">研究完了</span>' :
-        isActive ? '<span class="badge">研究中</span>' :
-        `<button ${(!reqOk || state.currentResearch) ? "disabled" : ""} onclick="startResearch('${r.id}')">${reqOk ? "研究を開始" : "前提研究が必要"}</button>`}
+  document.getElementById("focusList").innerHTML = `<div class="grid-2">` + NF_LIST.map(nf => {
+    const done = state.completedNFs.includes(nf.id);
+    const active = state.currentNF === nf.id;
+    const reqOk = !nf.req || state.completedNFs.includes(nf.req);
+    const cls = nf.id.includes("king_rally") ? "king-nf" : nf.id.includes("king_rebel") ? "rebel-nf" : "route-nf";
+    return `
+      <div class="focus-item ${cls} ${done ? "done" : active ? "active" : ""}">
+        <strong>${nf.name}</strong> <small>(${nf.turns}ターン)</small><br>
+        <small>${nf.desc}</small><br>
+        ${done ? '<span class="badge ally">完了</span>' :
+          active ? '<span class="badge">進行中</span>' :
+          `<button ${(!reqOk || state.currentNF) ? "disabled" : ""} onclick="startNF('${nf.id}')">${reqOk ? "方針を選択" : "前提未完了"}</button>`}
+      </div>
     `;
-    container.appendChild(div);
-  });
-}
-
-function renderFocusGroup(containerId, sideFilter, extraClass) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = "";
-  focusDefinitions.filter(f => f.side === sideFilter).forEach(f => {
-    const isDone = state.completedFocuses.includes(f.id);
-    const isActive = state.currentFocus === f.id;
-    const reqOk = !f.req || state.completedFocuses.includes(f.req);
-
-    const div = document.createElement("div");
-    div.className = `focus-item ${extraClass}` + (isDone ? " done" : isActive ? " active" : "");
-    div.innerHTML = `
-      <strong>${f.name}</strong> <small>(${f.days}日)</small><br>
-      <small>${f.desc}</small><br>
-      ${isDone ? '<span class="badge ally">完了済み</span>' :
-        isActive ? '<span class="badge">進行中</span>' :
-        `<button ${(!reqOk || state.currentFocus) ? "disabled" : ""} onclick="startFocus('${f.id}')">${reqOk ? "方針を選択" : "前提方針が未完了"}</button>`}
-    `;
-    container.appendChild(div);
-  });
+  }).join("") + `</div>`;
 }
 
 function render() {
-  document.getElementById("dispDate").textContent = formatDate(state.dayCount);
-  document.getElementById("dispTension").textContent = state.tension + "%";
-  document.getElementById("dispFaction").textContent = state.faction === "king" ? "国王陣営" : "内戦陣営";
+  const meta = FACTION_META[state.faction];
+  const ownedCount = state.provinces.filter(p => p.owner === "madagascar").length;
+  document.getElementById("factionSelect").value = state.faction;
+  document.getElementById("dispTurn").textContent = state.turn;
+  document.getElementById("dispFaction").textContent = meta.label;
+  document.getElementById("dispRoute").textContent = state.madagascarRoute;
+  document.getElementById("dispResSlots").textContent = `${state.activeResearch.length} / ${meta.slots}`;
   document.getElementById("dispPP").textContent = Math.floor(state.pp);
   document.getElementById("dispStab").textContent = state.stability + "%";
-  document.getElementById("dispDict").textContent = state.dictatorship + "%";
-  document.getElementById("dispInd").textContent = state.industry;
+  document.getElementById("dispFactories").textContent = `${state.factories} / ${state.docks}`;
   document.getElementById("dispManpower").textContent = state.manpower.toLocaleString();
   document.getElementById("dispArmyPower").textContent = state.armyPower;
 
-  document.getElementById("btnRecruitInf").disabled = state.industry < 10 || state.manpower < 2000;
-  document.getElementById("btnRecruitTank").disabled = state.industry < 35 || state.manpower < 1500;
-  document.getElementById("btnSpeech").disabled = state.pp < 35;
-  document.getElementById("btnCromwell").disabled = state.pp < 40;
+  document.getElementById("remFactoryBuild").textContent = Math.max(0, meta.buildCap - state.builtFactoriesThisTurn);
+  document.getElementById("remDockBuild").textContent = Math.max(0, meta.dockCap - state.builtDocksThisTurn);
+  document.getElementById("cntFactory").textContent = state.factories;
+  document.getElementById("cntDock").textContent = state.docks;
+  document.getElementById("cntOwnedProv").textContent = ownedCount;
+
+  document.getElementById("btnBuildFactory").disabled = state.builtFactoriesThisTurn >= meta.buildCap || state.pp < 15;
+  document.getElementById("btnBuildDock").disabled = state.builtDocksThisTurn >= meta.dockCap || state.pp < 20 || ownedCount < 2;
 
   renderWorldMap();
-  renderResearchList();
-
-  const activeBox = document.getElementById("activeFocusBox");
-  if (state.currentFocus) {
-    const af = focusDefinitions.find(x => x.id === state.currentFocus);
-    const pct = Math.min(100, Math.round((state.focusProgress / af.days) * 100));
-    activeBox.innerHTML = `進行中：<strong>${af.name}</strong>（${state.focusProgress}/${af.days}日）
-      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>`;
-  } else {
-    activeBox.innerHTML = `進行中の方針：<strong>なし（下から選択してください）</strong>`;
-  }
-
-  renderFocusGroup("focusCommonList", "common", "");
-  renderFocusGroup("focusKingList", "king", "king-nf");
-  renderFocusGroup("focusRebelList", "rebel", "rebel-nf");
-
-  const diploDiv = document.getElementById("diploList");
-  diploDiv.innerHTML = "";
-  ["france", "germany", "uk", "other"].forEach(c => {
-    const n = state.nations[c];
-    const rel = state.relations[c] || "中立";
-    const badgeClass = rel === "交戦中" ? "war" : (rel === "秘密同盟" || rel === "秘密通商" || rel === "武器供与中") ? "ally" : "";
-    const row = document.createElement("div");
-    row.className = "diplo-item";
-    row.innerHTML = `
-      <strong>${n.name}</strong> <span class="badge axis">${n.faction}</span> <span class="badge ${badgeClass}">${rel}</span><br>
-      <small>動向: ${n.status} ／ 推定戦力: <strong>${n.power}</strong></small><br>
-      <button ${state.pp < 30 ? "disabled" : ""} onclick="diploAction('${c}', 'trade')">秘密通商 (30PP)</button>
-      <button ${state.pp < 30 ? "disabled" : ""} onclick="diploAction('${c}', 'lendlease')">武器供与 (30PP)</button>
-      <button ${state.pp < 30 || rel === "交戦中" ? "disabled" : ""} onclick="diploAction('${c}', 'war')">宣戦布告 (30PP)</button>
-    `;
-    diploDiv.appendChild(row);
-  });
-
-  const provDiv = document.getElementById("provinceList");
-  provDiv.innerHTML = "";
-  state.provinces.forEach(p => {
-    const owned = p.owner === "nanzan";
-    const card = document.createElement("div");
-    card.className = "prov-item";
-    card.innerHTML = `
-      <strong>${p.name}</strong><br>
-      <small>支配勢力: ${owned ? "自軍支配区" : countryName(p.owner)} ／ 工業ボーナス: +${p.indBonus}</small><br>
-      ${owned ? '<span class="badge ally">制圧済み</span>' :
-        `<small>敵防衛戦力: <strong>${p.enemyPower}</strong></small><br>
-         <button onclick="attackProvince('${p.id}')">師団を進軍させる</button>`}
-    `;
-    provDiv.appendChild(card);
-  });
-
+  renderTechArea();
+  renderNF();
   document.getElementById("eventLog").innerHTML = state.logs.map(l => `<div>${l}</div>`).join("");
 }
 
 render();
-setSpeed(1);
 </script>
 </body>
 </html>
