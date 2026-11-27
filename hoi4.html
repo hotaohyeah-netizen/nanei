@@ -12,7 +12,7 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 <link rel="stylesheet" href="style.css">
 <style>
 .hoi-wrap {
-  max-width: 1040px;
+  max-width: 1060px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -59,6 +59,50 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 .focus-item.king-nf { border-left: 4px solid #b91c1c; }
 .focus-item.rebel-nf { border-left: 4px solid #0284c7; }
 .res-item { border-left: 4px solid #15803d; }
+
+/* 世界地図スタイル */
+.world-map-box {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #334155;
+  background: #0b192c;
+}
+.world-map-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.map-region {
+  cursor: pointer;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+  stroke: #e2e8f0;
+  stroke-width: 1.5;
+}
+.map-region:hover {
+  filter: brightness(1.22);
+}
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  margin-top: 8px;
+  justify-content: center;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
 .bar-bg {
   width: 100%;
   height: 10px;
@@ -108,7 +152,7 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 
 <header>
   <h1>Hearts of Nanzan ～マダガスカル王国の逆襲～</h1>
-  <p>特殊樹木兵器研究・陣営NF・外国軍拡が絡み合う大戦略シミュレーション</p>
+  <p>世界地図・特殊樹木兵器研究・陣営NF・外国軍拡が絡み合う大戦略シミュレーション</p>
 </header>
 
 <div class="hoi-wrap">
@@ -135,6 +179,111 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
       <button onclick="switchFaction()">陣営切替（国王／内戦）</button>
       <button onclick="saveGame()">セーブ</button>
       <button onclick="resetGame()">最初から</button>
+    </div>
+  </div>
+
+  <!-- 世界地図（ワールドマップ） -->
+  <div class="card">
+    <h2>世界地図（ワールドマップ＆インド洋・欧州情勢）</h2>
+    <p style="font-size:12px; margin-bottom:8px;">
+      地図上の各地域をクリックすると、その地域への進軍（制圧戦）を実行できます。
+    </p>
+
+    <div class="world-map-box">
+      <svg id="worldMapSvg" class="world-map-svg" viewBox="0 0 960 440" xmlns="http://www.w3.org/2000/svg">
+        <!-- 緯度・経度グリッド線 -->
+        <g stroke="#1e3a5f" stroke-width="0.8" stroke-dasharray="4 4">
+          <line x1="0" y1="110" x2="960" y2="110" />
+          <line x1="0" y1="220" x2="960" y2="220" />
+          <line x1="0" y1="330" x2="960" y2="330" />
+          <line x1="240" y1="0" x2="240" y2="440" />
+          <line x1="480" y1="0" x2="480" y2="440" />
+          <line x1="720" y1="0" x2="720" y2="440" />
+        </g>
+
+        <!-- 背景大陸シルエット（装飾） -->
+        <path d="M 30 70 Q 150 40 230 95 Q 210 170 130 190 Q 50 175 30 70 Z" fill="#172a45" stroke="#26466d" />
+        <path d="M 740 50 Q 910 45 935 150 Q 860 220 760 190 Q 720 120 740 50 Z" fill="#172a45" stroke="#26466d" />
+
+        <!-- 欧州：ドイツ -->
+        <g onclick="handleMapClick('germany')">
+          <polygon id="map-germany" class="map-region" points="455,65 535,62 545,112 462,118" fill="#6d28d9" />
+          <text x="500" y="94" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">ドイツ</text>
+        </g>
+
+        <!-- 欧州：イギリス本土 -->
+        <g onclick="handleMapClick('uk_home')">
+          <polygon id="map-uk_home" class="map-region" points="405,52 446,48 450,96 408,100" fill="#2563eb" />
+          <text x="427" y="78" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">英本土</text>
+        </g>
+
+        <!-- 欧州：フランス -->
+        <g onclick="handleMapClick('france')">
+          <polygon id="map-france" class="map-region" points="415,105 475,102 482,150 412,154" fill="#3b82f6" />
+          <text x="447" y="132" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">フランス</text>
+        </g>
+
+        <!-- アフリカ北・中央部（周辺諸国） -->
+        <g onclick="handleMapClick('other')">
+          <polygon id="map-other" class="map-region" points="410,165 555,165 575,255 445,260 395,215" fill="#d97706" />
+          <text x="485" y="212" fill="#fff" font-size="13" font-weight="bold" text-anchor="middle">アフリカ・周辺諸国</text>
+        </g>
+
+        <!-- 戦線1：北部内戦エリア -->
+        <g id="group-rebel_north" onclick="handleMapClick('rebel_north')" style="display:none;">
+          <ellipse id="map-rebel_north" class="map-region" cx="615" cy="255" rx="34" ry="18" fill="#0284c7" />
+          <text x="615" y="259" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">内戦区</text>
+        </g>
+
+        <!-- 戦線2：マダガスカル本島（王都） -->
+        <g onclick="handleMapClick('madagascar')">
+          <path id="map-madagascar" class="map-region" d="M 605 275 L 635 280 L 622 355 L 592 345 Z" fill="#16a34a" />
+          <text x="613" y="320" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">南山</text>
+        </g>
+
+        <!-- 戦線3：レユニオン・モーリシャス諸島 -->
+        <g onclick="handleMapClick('reunion')">
+          <circle id="map-reunion" class="map-region" cx="665" cy="325" r="16" fill="#3b82f6" />
+          <text x="665" y="352" fill="#e2e8f0" font-size="10" font-weight="bold" text-anchor="middle">レユニオン</text>
+        </g>
+
+        <!-- 戦線4：モザンビーク沿岸 -->
+        <g onclick="handleMapClick('mozambique')">
+          <polygon id="map-mozambique" class="map-region" points="525,262 575,262 565,335 518,325" fill="#d97706" />
+          <text x="546" y="298" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">モザンビーク</text>
+        </g>
+
+        <!-- 戦線5：旧英領セイロン島（インド洋要衝） -->
+        <g onclick="handleMapClick('ceylon')">
+          <polygon id="map-ceylon" class="map-region" points="695,215 735,212 740,255 698,258" fill="#1d4ed8" />
+          <text x="717" y="239" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">セイロン</text>
+        </g>
+
+        <!-- 戦線6：旧英領南アフリカ拠点 -->
+        <g onclick="handleMapClick('south_africa')">
+          <polygon id="map-south_africa" class="map-region" points="460,332 565,336 545,402 475,395" fill="#1d4ed8" />
+          <text x="512" y="370" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">南アフリカ</text>
+        </g>
+
+        <!-- 自軍マーカー＆交戦フラッシュ -->
+        <g id="armyMarker" transform="translate(613, 315)" style="pointer-events:none; transition: transform 0.35s ease;">
+          <circle r="11" fill="#fde047" opacity="0.35" />
+          <text y="5" fill="#fde047" font-size="15" font-weight="bold" text-anchor="middle">⚔️</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="map-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#16a34a;"></span>マダガスカル王国（自国）</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span>フランス</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#6d28d9;"></span>ドイツ</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#1d4ed8;"></span>イギリス／旧英領</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#d97706;"></span>周辺諸国</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#0284c7;"></span>内戦勢力</span>
+    </div>
+
+    <div id="mapInfoBox" class="log-feed" style="margin-top:10px; max-height:60px;">
+      地図上の地域をクリックすると戦況表示・進軍ができます。
     </div>
   </div>
 
@@ -220,7 +369,20 @@ if (sessionStorage.getItem("nanei_login") !== "ok") {
 </div>
 
 <script>
-const SAVE_KEY = "heartsOfNanzanResearchWorldSave_v1";
+const SAVE_KEY = "heartsOfNanzanWorldMapSave_v1";
+
+const mapCoords = {
+  madagascar: { x: 613, y: 315 },
+  reunion: { x: 665, y: 325 },
+  mozambique: { x: 546, y: 298 },
+  ceylon: { x: 717, y: 239 },
+  south_africa: { x: 512, y: 370 },
+  rebel_north: { x: 615, y: 255 },
+  france: { x: 447, y: 132 },
+  germany: { x: 500, y: 94 },
+  uk_home: { x: 427, y: 78 },
+  other: { x: 485, y: 212 }
+};
 
 const researchDefinitions = [
   {
@@ -292,6 +454,7 @@ const worldEvents = [
     desc: "大英帝国の中枢が崩壊！インド洋・アフリカの旧英領は本国支援を失う一方、ドイツとフランスは軍拡を加速！",
     effect: (s) => {
       s.tension = 100;
+      s.ukFallen = true;
       s.nations.uk.name = "旧イギリス領残存勢力";
       s.nations.uk.faction = "本国陥落・崩壊";
       s.nations.uk.power = 90;
@@ -452,6 +615,8 @@ function defaultState() {
   return {
     dayCount: 0,
     tension: 15,
+    ukFallen: false,
+    activeMarkerId: "madagascar",
     faction: "king",
     pp: 50,
     stability: 75,
@@ -468,7 +633,7 @@ function defaultState() {
     researchProgress: 0,
     civilWarTriggered: false,
     nations: {
-      france: { name: "フランス共和国（健在）", faction: "西欧列強・旧宗主国", power: 340, growth: 6, status: "マダガスカル権益維持" },
+      france: { name: "フランス共和国（健存）", faction: "西欧列強・旧宗主国", power: 340, growth: 6, status: "マダガスカル権益維持" },
       germany: { name: "ドイツ（ベルリン）", faction: "欧州枢軸勢力", power: 390, growth: 8, status: "対英決戦準備" },
       uk: { name: "イギリス帝国", faction: "インド洋・植民地帝国", power: 350, growth: 4, status: "英本土防衛中" },
       other: { name: "周辺諸国", faction: "アフリカ・インド洋", power: 210, growth: 4, status: "情勢観望" }
@@ -557,7 +722,6 @@ function growForeignPowers() {
     n.power += inc;
   });
 
-  // 未制圧プロヴィンスの防衛力も外国軍拡に合わせて段階上昇
   state.provinces.forEach(p => {
     if (p.owner !== "nanzan") {
       const ownerGrowth = state.nations[p.owner]?.growth || 3;
@@ -581,7 +745,6 @@ function advanceDay() {
   state.pp = Number((state.pp + ppGain).toFixed(1));
   state.manpower += Math.round(35 + state.industry * 1.5);
 
-  // 国家方針の進行
   if (state.currentFocus) {
     const f = focusDefinitions.find(x => x.id === state.currentFocus);
     if (f) {
@@ -595,7 +758,6 @@ function advanceDay() {
     }
   }
 
-  // 特殊樹木兵器研究の進行
   if (state.currentResearch) {
     const r = researchDefinitions.find(x => x.id === state.currentResearch);
     if (r) {
@@ -609,7 +771,6 @@ function advanceDay() {
     }
   }
 
-  // 15日ごとに外国戦力・プロヴィンス防衛力が段階的に強化
   if (state.dayCount % 15 === 0) {
     growForeignPowers();
   }
@@ -630,6 +791,32 @@ function advanceDay() {
     log("【緊急事態】マダガスカル大内戦勃発！国王陣営NFと内戦陣営NFの双方が激突します！");
   }
 
+  render();
+}
+
+function handleMapClick(regionId) {
+  state.activeMarkerId = regionId;
+  const prov = state.provinces.find(p => p.id === regionId);
+  if (prov) {
+    if (prov.owner === "nanzan") {
+      document.getElementById("mapInfoBox").textContent =
+        `【${prov.name}】マダガスカル王国が制圧済み（工業ボーナス +${prov.indBonus}）。`;
+    } else {
+      attackProvince(prov.id);
+    }
+    render();
+    return;
+  }
+
+  const labelMap = {
+    germany: `ドイツ（${state.nations.germany.status}／推定戦力 ${state.nations.germany.power}）`,
+    uk_home: state.ukFallen
+      ? "イギリス本土：ドイツ軍により制圧・降伏済み"
+      : `イギリス本土（${state.nations.uk.status}／推定戦力 ${state.nations.uk.power}）`,
+    france: `フランス（${state.nations.france.status}／推定戦力 ${state.nations.france.power}）`,
+    other: `周辺諸国（${state.nations.other.status}／推定戦力 ${state.nations.other.power}）`
+  };
+  document.getElementById("mapInfoBox").textContent = labelMap[regionId] || "地域を選択しました。";
   render();
 }
 
@@ -723,6 +910,8 @@ function attackProvince(provId) {
   const p = state.provinces.find(x => x.id === provId);
   if (!p || p.owner === "nanzan") return;
 
+  state.activeMarkerId = provId;
+
   if (!["rebels", "king_loyalists"].includes(p.owner) && state.relations[p.owner] !== "交戦中") {
     state.relations[p.owner] = "交戦中";
     state.tension = Math.min(100, state.tension + 8);
@@ -735,14 +924,53 @@ function attackProvince(provId) {
     p.owner = "nanzan";
     p.enemyPower = 0;
     state.industry += p.indBonus;
-    log(`【勝利】${p.name}を制圧！工業力 +${p.indBonus} を獲得！`);
+    const msg = `【勝利】${p.name}を制圧！工業力 +${p.indBonus} を獲得！`;
+    log(msg);
+    document.getElementById("mapInfoBox").textContent = msg;
   } else {
     const loss = Math.round(state.armyPower * 0.2);
     state.armyPower = Math.max(10, state.armyPower - loss);
     p.enemyPower = Math.max(20, p.enemyPower - Math.round(state.armyPower * 0.4));
-    log(`【苦戦】${p.name}への強襲は撃退されました。`);
+    const msg = `【苦戦】${p.name}への強襲は撃退されました（残存敵戦力: ${p.enemyPower}）。`;
+    log(msg);
+    document.getElementById("mapInfoBox").textContent = msg;
   }
   render();
+}
+
+function renderWorldMap() {
+  const ownerColors = {
+    nanzan: "#16a34a",
+    france: "#3b82f6",
+    germany: "#6d28d9",
+    uk: "#1d4ed8",
+    other: "#d97706",
+    rebels: "#0284c7",
+    king_loyalists: "#f97316"
+  };
+
+  state.provinces.forEach(p => {
+    const el = document.getElementById("map-" + p.id);
+    if (el) {
+      el.setAttribute("fill", ownerColors[p.owner] || "#64748b");
+    }
+  });
+
+  const rebelGroup = document.getElementById("group-rebel_north");
+  if (rebelGroup) {
+    rebelGroup.style.display = state.provinces.some(p => p.id === "rebel_north") ? "inline" : "none";
+  }
+
+  const ukHomeEl = document.getElementById("map-uk_home");
+  if (ukHomeEl) {
+    ukHomeEl.setAttribute("fill", state.ukFallen ? "#6d28d9" : "#2563eb");
+  }
+
+  const coord = mapCoords[state.activeMarkerId] || mapCoords.madagascar;
+  const marker = document.getElementById("armyMarker");
+  if (marker) {
+    marker.setAttribute("transform", `translate(${coord.x}, ${coord.y})`);
+  }
 }
 
 function renderResearchList() {
@@ -813,6 +1041,7 @@ function render() {
   document.getElementById("btnSpeech").disabled = state.pp < 35;
   document.getElementById("btnCromwell").disabled = state.pp < 40;
 
+  renderWorldMap();
   renderResearchList();
 
   const activeBox = document.getElementById("activeFocusBox");
